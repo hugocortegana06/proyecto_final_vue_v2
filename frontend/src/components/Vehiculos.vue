@@ -151,9 +151,9 @@
               class="form-select"
             >
               <option
-                value="Motocicleta, aperos, motocarros y similares: 25 €"
+                value="Motocicleta, aperos, motocarros y similares"
               >
-                Motocicleta, aperos, motocarros y similares: 25 €
+                Motocicleta, aperos, motocarros y similares
               </option>
               <option
                 value="Turismo hasta 12 cv ó Remolques hasta 750 kg"

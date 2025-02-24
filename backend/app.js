@@ -4,7 +4,8 @@ const cors = require('cors');
 const mysql = require('mysql2');
 const session = require('express-session');
 const MySQLStore = require('express-mysql-session')(session);
-
+const tarifasRoutes = require('./routes/tarifasRoutes');
+// ...
 const app = express();
 app.use(express.json());
 
@@ -46,6 +47,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/usuarios', usuariosRoutes);
 app.use('/api/vehiculos', vehiculosRoutes);
 app.use('/api/retiradas', retiradasRoutes);
+app.use('/api/tarifas', tarifasRoutes);
 
 // Ruta de prueba
 app.get('/', (req, res) => {
