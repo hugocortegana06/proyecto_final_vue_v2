@@ -1,0 +1,8 @@
+// Sobrescribir variables de Bootstrap antes de importarlo
+$primary: #0b3d91;   // azul oscuro
+$secondary: #2e559e; // azul más claro
+$body-bg: #f8f9fa;
+$font-family-base: 'Helvetica, Arial, sans-serif';
+
+// Importa Bootstrap SCSS
+@import "bootstrap/scss/bootstrap";
