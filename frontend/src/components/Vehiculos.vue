@@ -3,22 +3,14 @@
     <h2 class="mb-4 text-primary">Gestión de Vehículos</h2>
 
     <!-- Modal de éxito -->
-    <div
-      v-if="modalExito"
-      class="custom-modal"
-      @click.self="cerrarModalGlobal"
-    >
+    <div v-if="modalExito" class="custom-modal" @click.self="cerrarModalGlobal">
       <div class="modal-content-custom">
         <p class="text-center">{{ mensajeExito }}</p>
       </div>
     </div>
 
     <!-- Modal de confirmación de eliminación -->
-    <div
-      v-if="modalEliminar"
-      class="custom-modal"
-      @click.self="cerrarModalGlobal"
-    >
+    <div v-if="modalEliminar" class="custom-modal" @click.self="cerrarModalGlobal">
       <div class="modal-content-custom">
         <div class="d-flex justify-content-between align-items-center mb-2">
           <h5 class="mb-0">Confirmar Eliminación</h5>
@@ -37,6 +29,34 @@
       </div>
     </div>
 
+    <!-- Filtros y selección de elementos por página -->
+    <div class="d-flex justify-content-between mb-3">
+      <div>
+        <label for="itemsPerPage" class="form-label">Elementos por página:</label>
+        <select id="itemsPerPage" v-model.number="itemsPerPage" class="form-select" style="max-width: 200px;">
+          <option v-for="option in itemsPerPageOptions" :key="option" :value="option">
+            {{ option }}
+          </option>
+        </select>
+      </div>
+      <div>
+        <label for="filtroMatricula" class="form-label">Filtrar por Matrícula:</label>
+        <input id="filtroMatricula" v-model="filtroMatricula" type="text" class="form-control" placeholder="Buscar matrícula" style="max-width: 200px;" />
+      </div>
+      <div>
+        <label for="filtroFecha" class="form-label">Filtrar por Fecha de Entrada:</label>
+        <input id="filtroFecha" v-model="filtroFecha" type="date" class="form-control" style="max-width: 200px;" />
+      </div>
+      <div>
+        <label for="filtroEstado" class="form-label">Filtrar por Estado:</label>
+        <select id="filtroEstado" v-model="filtroEstado" class="form-select" style="max-width: 200px;">
+          <option value="">Todos</option>
+          <option value="En depósito">En depósito</option>
+          <option value="Liquidado">Liquidado</option>
+        </select>
+      </div>
+    </div>
+
     <!-- Botón para mostrar/ocultar formulario para añadir/editar vehículo -->
     <button class="btn btn-success mb-3" @click="toggleFormulario">
       {{ mostrarFormulario ? 'Ocultar Formulario' : 'Añadir Vehículo' }}
@@ -45,124 +65,65 @@
     <!-- Formulario para añadir/editar vehículo -->
     <div v-if="mostrarFormulario" class="card mb-3">
       <div class="card-body">
-        <h5 class="card-title">
-          {{ editMode ? 'Editar Vehículo' : 'Nuevo Vehículo' }}
-        </h5>
+        <h5 class="card-title">{{ editMode ? 'Editar Vehículo' : 'Nuevo Vehículo' }}</h5>
         <form @submit.prevent="guardarVehiculo">
           <!-- Fecha de Entrada (solo lectura) -->
           <div class="mb-3">
             <label class="form-label">Fecha de Entrada</label>
-            <input
-              type="text"
-              v-model="nuevoVehiculo.fechaentrada"
-              class="form-control"
-              disabled
-            />
+            <input type="text" v-model="nuevoVehiculo.fechaentrada" class="form-control" disabled />
           </div>
-
           <!-- Lugar -->
           <div class="mb-3">
             <label class="form-label">Lugar</label>
-            <input
-              type="text"
-              v-model="nuevoVehiculo.lugar"
-              class="form-control"
-            />
+            <input type="text" v-model="nuevoVehiculo.lugar" class="form-control" />
           </div>
-
           <!-- Dirección -->
           <div class="mb-3">
             <label class="form-label">Dirección</label>
-            <input
-              type="text"
-              v-model="nuevoVehiculo.direccion"
-              class="form-control"
-            />
+            <input type="text" v-model="nuevoVehiculo.direccion" class="form-control" />
           </div>
-
           <!-- Agente -->
           <div class="mb-3">
             <label class="form-label">Agente</label>
-            <input
-              type="text"
-              v-model="nuevoVehiculo.agente"
-              class="form-control"
-            />
+            <input type="text" v-model="nuevoVehiculo.agente" class="form-control" />
           </div>
-
           <!-- Matrícula (campo obligatorio con validación) -->
           <div class="mb-3">
             <label class="form-label">Matrícula</label>
-            <input
-              type="text"
-              v-model="nuevoVehiculo.matricula"
-              class="form-control"
-              :class="{ 'is-invalid': errorMatricula }"
-              required
-            />
+            <input type="text" v-model="nuevoVehiculo.matricula" class="form-control" :class="{ 'is-invalid': errorMatricula }" required />
             <div class="invalid-feedback">{{ errorMatricula }}</div>
           </div>
-
           <!-- Marca -->
           <div class="mb-3">
             <label class="form-label">Marca</label>
-            <input
-              type="text"
-              v-model="nuevoVehiculo.marca"
-              class="form-control"
-            />
+            <input type="text" v-model="nuevoVehiculo.marca" class="form-control" />
           </div>
-
           <!-- Modelo -->
           <div class="mb-3">
             <label class="form-label">Modelo</label>
-            <input
-              type="text"
-              v-model="nuevoVehiculo.modelo"
-              class="form-control"
-            />
+            <input type="text" v-model="nuevoVehiculo.modelo" class="form-control" />
           </div>
-
           <!-- Color -->
           <div class="mb-3">
             <label class="form-label">Color</label>
-            <input
-              type="text"
-              v-model="nuevoVehiculo.color"
-              class="form-control"
-            />
+            <input type="text" v-model="nuevoVehiculo.color" class="form-control" />
           </div>
-
           <!-- Motivo -->
           <div class="mb-3">
             <label class="form-label">Motivo</label>
-            <input
-              type="text"
-              v-model="nuevoVehiculo.motivo"
-              class="form-control"
-            />
+            <input type="text" v-model="nuevoVehiculo.motivo" class="form-control" />
           </div>
-
           <!-- Tipo de Vehículo (desplegable) -->
           <div class="mb-3">
             <label class="form-label">Tipo de Vehículo</label>
-            <select
-              v-model="nuevoVehiculo.tipovehiculo"
-              class="form-select"
-            >
-              <option
-                value="Motocicleta, aperos, motocarros y similares"
-              >
-                Motocicleta, aperos, motocarros y similares
+            <select v-model="nuevoVehiculo.tipovehiculo" class="form-select">
+              <option value="Motocicleta, aperos, motocarros y similares: 25 €">
+                Motocicleta, aperos, motocarros y similares: 25 €
               </option>
-              <option
-                value="Turismo hasta 12 cv ó Remolques hasta 750 kg"
-              >
+              <option value="Turismo hasta 12 cv ó Remolques hasta 750 kg">
                 Turismo hasta 12 cv ó Remolques hasta 750 kg
               </option>
-              <option
-                value="Turismos más de 12 cv ó Remolques más de 750 kg"
-              >
+              <option value="Turismos más de 12 cv ó Remolques más de 750 kg">
                 Turismos más de 12 cv ó Remolques más de 750 kg
               </option>
               <option value="Vehículos especiales">Vehículos especiales</option>
@@ -170,98 +131,19 @@
               <option value="Chatarra">Chatarra</option>
             </select>
           </div>
-
           <!-- Grua -->
           <div class="mb-3">
             <label class="form-label">Grua</label>
-            <input
-              type="text"
-              v-model="nuevoVehiculo.grua"
-              class="form-control"
-            />
+            <input type="text" v-model="nuevoVehiculo.grua" class="form-control" />
           </div>
-
           <!-- Estado (fijo en 'En depósito') -->
           <div class="mb-3">
             <label class="form-label">Estado</label>
-            <input
-              type="text"
-              v-model="nuevoVehiculo.estado"
-              class="form-control"
-              disabled
-            />
+            <input type="text" v-model="nuevoVehiculo.estado" class="form-control" disabled />
           </div>
-
-          <button type="submit" class="btn btn-primary">
-            {{ editMode ? 'Actualizar' : 'Guardar Vehículo' }}
-          </button>
-          <button
-            type="button"
-            class="btn btn-secondary"
-            @click="cancelarFormulario"
-          >
-            Cancelar
-          </button>
+          <button type="submit" class="btn btn-primary">{{ editMode ? 'Actualizar' : 'Guardar Vehículo' }}</button>
+          <button type="button" class="btn btn-secondary" @click="cancelarFormulario">Cancelar</button>
         </form>
-      </div>
-    </div>
-
-    <!-- Filtros y selección de elementos por página -->
-    <div class="d-flex justify-content-between mb-3">
-      <div>
-        <label for="itemsPerPage" class="form-label"
-          >Elementos por página:</label
-        >
-        <select
-          id="itemsPerPage"
-          v-model.number="itemsPerPage"
-          class="form-select"
-          style="max-width: 200px;"
-        >
-          <option
-            v-for="option in itemsPerPageOptions"
-            :key="option"
-            :value="option"
-          >
-            {{ option }}
-          </option>
-        </select>
-      </div>
-      <div>
-        <label for="filtroMatricula" class="form-label"
-          >Filtrar por Matrícula:</label
-        >
-        <input
-          id="filtroMatricula"
-          v-model="filtroMatricula"
-          type="text"
-          class="form-control"
-          placeholder="Buscar matrícula"
-          style="max-width: 200px;"
-        />
-      </div>
-      <div>
-        <label for="filtroFecha" class="form-label">Filtrar por Fecha:</label>
-        <input
-          id="filtroFecha"
-          v-model="filtroFecha"
-          type="date"
-          class="form-control"
-          style="max-width: 200px;"
-        />
-      </div>
-      <div>
-        <label for="filtroEstado" class="form-label">Filtrar por Estado:</label>
-        <select
-          id="filtroEstado"
-          v-model="filtroEstado"
-          class="form-select"
-          style="max-width: 200px;"
-        >
-          <option value="">Todos</option>
-          <option value="En depósito">En depósito</option>
-          <option value="Liquidado">Liquidado</option>
-        </select>
       </div>
     </div>
 
@@ -285,9 +167,7 @@
       <tbody>
         <tr v-for="veh in paginatedVehiculos" :key="veh.id">
           <td>{{ formatDate(veh.fechaentrada) }}</td>
-          <td>
-            {{ veh.fechasalida ? formatDate(veh.fechasalida) : 'N/A' }}
-          </td>
+          <td>{{ veh.fechasalida ? formatDate(veh.fechasalida) : 'N/A' }}</td>
           <td>{{ veh.matricula }}</td>
           <td>{{ veh.marca }}</td>
           <td>{{ veh.modelo }}</td>
@@ -297,18 +177,8 @@
           <td>{{ veh.tipovehiculo }}</td>
           <td>{{ veh.estado }}</td>
           <td v-if="isAdmin">
-            <button
-              class="btn btn-sm btn-warning me-2"
-              @click="editarVehiculo(veh)"
-            >
-              Editar
-            </button>
-            <button
-              class="btn btn-sm btn-danger"
-              @click="mostrarModalEliminar(veh)"
-            >
-              Eliminar
-            </button>
+            <button class="btn btn-sm btn-warning me-2" @click="editarVehiculo(veh)">Editar</button>
+            <button class="btn btn-sm btn-danger" @click="mostrarModalEliminar(veh)">Eliminar</button>
           </td>
         </tr>
       </tbody>
@@ -317,31 +187,14 @@
     <!-- Paginación -->
     <nav v-if="totalPages > 1" aria-label="Page navigation">
       <ul class="pagination">
-        <li
-          class="page-item"
-          :class="{ disabled: currentPage === 1 }"
-        >
-          <button class="page-link" @click="goToPage(currentPage - 1)">
-            Anterior
-          </button>
+        <li class="page-item" :class="{ disabled: currentPage === 1 }">
+          <button class="page-link" @click="goToPage(currentPage - 1)">Anterior</button>
         </li>
-        <li
-          class="page-item"
-          v-for="page in totalPages"
-          :key="page"
-          :class="{ active: page === currentPage }"
-        >
-          <button class="page-link" @click="goToPage(page)">
-            {{ page }}
-          </button>
+        <li class="page-item" v-for="page in totalPages" :key="page" :class="{ active: page === currentPage }">
+          <button class="page-link" @click="goToPage(page)">{{ page }}</button>
         </li>
-        <li
-          class="page-item"
-          :class="{ disabled: currentPage === totalPages }"
-        >
-          <button class="page-link" @click="goToPage(currentPage + 1)">
-            Siguiente
-          </button>
+        <li class="page-item" :class="{ disabled: currentPage === totalPages }">
+          <button class="page-link" @click="goToPage(currentPage + 1)">Siguiente</button>
         </li>
       </ul>
     </nav>
@@ -352,7 +205,7 @@
 import { ref, computed, onMounted, watch, inject } from 'vue'
 import axios from 'axios'
 
-// Inyectar el objeto "user" y determinar si es admin (asegúrate de proveer en un padre)
+// Inyectar objeto "user" y determinar si es admin (debes proveerlo en el componente padre)
 const user = inject('user')
 const isAdmin = computed(() => {
   return user && user.value && user.value.role && user.value.role.toLowerCase() === 'admin'
@@ -380,15 +233,12 @@ const filteredVehiculos = computed(() => {
     const matchMatricula = filtroMatricula.value
       ? veh.matricula && veh.matricula.toLowerCase().includes(filtroMatricula.value.toLowerCase())
       : true
-
     const matchFecha = filtroFecha.value
       ? veh.fechaentrada && veh.fechaentrada.slice(0, 10) === filtroFecha.value
       : true
-
     const matchEstado = filtroEstado.value
       ? veh.estado && veh.estado.toLowerCase() === filtroEstado.value.toLowerCase()
       : true
-
     return matchMatricula && matchFecha && matchEstado
   })
 })
@@ -399,7 +249,7 @@ const paginatedVehiculos = computed(() => {
   return filteredVehiculos.value.slice(start, start + itemsPerPage.value)
 })
 
-// Control para añadir/editar
+// Control para añadir/editar vehículo
 const mostrarFormulario = ref(false)
 const editMode = ref(false)
 const nuevoVehiculo = ref({
@@ -414,51 +264,43 @@ const nuevoVehiculo = ref({
   modelo: '',
   color: '',
   motivo: '',
-  tipovehiculo: 'Motocicleta, aperos, motocarros y similares: 25 €',
+  tipovehiculo: 'Motocicleta, aperos, motocarros y similares:',
   grua: '',
   estado: 'En depósito'
 })
 
-// Validación + modal de éxito
+// Validación y modal de éxito
 const errorMatricula = ref('')
 const mensajeExito = ref('')
 const modalExito = ref(false)
 
-// Modal eliminar
+// Modal de confirmación de eliminación
 const modalEliminar = ref(false)
 const vehiculoAEliminar = ref(null)
 
-// Formatear fecha (YYYY-MM-DD HH:mm:ss -> DD/MM/YYYY HH:mm)
+// Función para formatear fecha (si tiene "T", se convierte; de lo contrario, se asume ya en el formato deseado)
 function formatDate(fecha) {
   if (!fecha) return 'N/A'
-  try {
-    const [datePart, timePart] = fecha.split(' ')
-    const [year, month, day] = datePart.split('-')
-    const [hours, minutes] = timePart.split(':')
-    return `${day}/${month}/${year} ${hours}:${minutes}`
-  } catch (e) {
+  if (fecha.includes('T')) {
+    const d = new Date(fecha)
+    return getFechaActual(d)
+  } else {
     return fecha
   }
 }
 
-function getFechaActual(d) {
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const dd = String(d.getDate()).padStart(2, '0')
-  const hh = String(d.getHours()).padStart(2, '0')
-  const min = String(d.getMinutes()).padStart(2, '0')
-  const ss = String(d.getSeconds()).padStart(2, '0')
-  return `${y}-${m}-${dd} ${hh}:${min}:${ss}`
+// Función para obtener fecha/hora actual en formato 'YYYY-MM-DD HH:mm:ss'
+function getFechaActual(dateObj) {
+  const year = dateObj.getFullYear()
+  const month = String(dateObj.getMonth() + 1).padStart(2, '0')
+  const day = String(dateObj.getDate()).padStart(2, '0')
+  const hours = String(dateObj.getHours()).padStart(2, '0')
+  const minutes = String(dateObj.getMinutes()).padStart(2, '0')
+  const seconds = String(dateObj.getSeconds()).padStart(2, '0')
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
 }
 
-// Cargar al montar
-onMounted(async () => {
-  await cargarVehiculos()
-  const now = new Date()
-  nuevoVehiculo.value.fechaentrada = getFechaActual(now)
-})
-
-// CargarVehiculos
+// Cargar vehículos desde el backend
 async function cargarVehiculos() {
   try {
     const { data } = await axios.get('/vehiculos')
@@ -468,6 +310,24 @@ async function cargarVehiculos() {
   }
 }
 
+// Cargar retiradas desde el backend
+async function cargarRetiradas() {
+  try {
+    const { data } = await axios.get('/retiradas')
+    retiradas.value = data
+  } catch (error) {
+    console.error('Error al cargar retiradas:', error)
+  }
+}
+
+onMounted(async () => {
+  await cargarVehiculos()
+  await cargarRetiradas()
+  // Al montar, asignar fecha actual al nuevo vehículo para el formulario (si se requiere)
+  const now = new Date()
+  nuevoVehiculo.value.fechaentrada = getFechaActual(now)
+})
+
 // Paginación
 function goToPage(page) {
   if (page >= 1 && page <= totalPages.value) {
@@ -475,7 +335,7 @@ function goToPage(page) {
   }
 }
 
-// Toggle form
+// Alternar formulario
 function toggleFormulario() {
   mostrarFormulario.value = !mostrarFormulario.value
   if (!mostrarFormulario.value) {
@@ -483,7 +343,7 @@ function toggleFormulario() {
   }
 }
 
-// Cancelar
+// Cancelar y limpiar formulario
 function cancelarFormulario() {
   mostrarFormulario.value = false
   errorMatricula.value = ''
@@ -491,7 +351,6 @@ function cancelarFormulario() {
   mensajeExito.value = ''
   modalExito.value = false
   modalEliminar.value = false
-
   const now = new Date()
   nuevoVehiculo.value = {
     id: null,
@@ -505,17 +364,16 @@ function cancelarFormulario() {
     modelo: '',
     color: '',
     motivo: '',
-    tipovehiculo: 'Motocicleta, aperos, motocarros y similares: 25 €',
+    tipovehiculo: 'Motocicleta, aperos, motocarros y similares:',
     grua: '',
     estado: 'En depósito'
   }
 }
 
-// Validar
+// Validar formulario de vehículo (ejemplo: validar matrícula)
 function validarVehiculo() {
   let isOk = true
   errorMatricula.value = ''
-
   if (!nuevoVehiculo.value.matricula || nuevoVehiculo.value.matricula.length < 3) {
     errorMatricula.value = 'La matrícula debe tener al menos 3 caracteres.'
     isOk = false
@@ -523,24 +381,20 @@ function validarVehiculo() {
   return isOk
 }
 
-// Guardar (POST o PUT)
+// Guardar vehículo (POST o PUT)
 async function guardarVehiculo() {
   if (!validarVehiculo()) return
   try {
     if (editMode.value && nuevoVehiculo.value.id) {
-      // PUT
+      // PUT para actualizar
       await axios.put(`/vehiculos/${nuevoVehiculo.value.id}`, nuevoVehiculo.value)
       mensajeExito.value = 'Vehículo editado exitosamente.'
     } else {
-      // POST
+      // POST para crear
       await axios.post('/vehiculos', nuevoVehiculo.value)
       mensajeExito.value = 'Vehículo creado exitosamente.'
     }
-
-    // Recargar lista
     await cargarVehiculos()
-
-    // Mostrar exito
     modalExito.value = true
     setTimeout(() => {
       modalExito.value = false
@@ -551,26 +405,26 @@ async function guardarVehiculo() {
   }
 }
 
-// Editar
+// Función para editar vehículo (modo edición)
 function editarVehiculo(veh) {
-  // Copiamos todo, asegurándonos de traer veh.id
-  nuevoVehiculo.value = { ...veh }  
+  nuevoVehiculo.value = { ...veh }
   editMode.value = true
   mostrarFormulario.value = true
 }
 
-// Eliminar
+// Función para mostrar modal de eliminación
 function mostrarModalEliminar(veh) {
   vehiculoAEliminar.value = veh
   modalEliminar.value = true
 }
 
-// Cerrar modales
+// Función para cerrar modal de eliminación
 function cerrarModalEliminar() {
   modalEliminar.value = false
   vehiculoAEliminar.value = null
 }
 
+// Función para confirmar eliminación de vehículo
 async function confirmarEliminar() {
   if (!vehiculoAEliminar.value) return
   try {
@@ -587,10 +441,10 @@ async function confirmarEliminar() {
   }
 }
 
-// Cerrar modal si clic en fondo
-function cerrarModalGlobal() {
-  modalExito.value = false
-  modalEliminar.value = false
+// Función para obtener la matrícula de un vehículo a partir de su ID
+function getMatriculaById(idVehiculo) {
+  const veh = vehiculos.value.find(v => v.id == idVehiculo)
+  return veh ? veh.matricula : 'N/A'
 }
 </script>
 
@@ -619,5 +473,9 @@ function cerrarModalGlobal() {
   border-radius: 0.3rem;
   z-index: 1060;
   min-width: 300px;
+}
+
+.table {
+  margin-top: 20px;
 }
 </style>

@@ -2,7 +2,32 @@
   <div class="container mt-5">
     <h2 class="mb-4 text-primary">Gestión de Retiradas</h2>
     
-    <!-- Botón para mostrar/ocultar el formulario de nueva retirada -->
+    <!-- Modal de éxito -->
+    <div v-if="modalExito" class="custom-modal" @click.self="cerrarModalGlobal">
+      <div class="modal-content-custom">
+        <p class="text-center">{{ mensajeExito }}</p>
+      </div>
+    </div>
+    
+    <!-- Modal de confirmación de eliminación -->
+    <div v-if="modalEliminar" class="custom-modal" @click.self="cerrarModalGlobal">
+      <div class="modal-content-custom">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h5 class="mb-0">Confirmar Eliminación</h5>
+          <button type="button" class="btn-close" @click="cerrarModalEliminar"></button>
+        </div>
+        <p>
+          ¿Estás seguro de que deseas eliminar la retirada del vehículo con matrícula
+          <strong>{{ getMatriculaById(retiradaAEliminar?.idvehiculos) }}</strong>?
+        </p>
+        <div class="d-flex justify-content-end">
+          <button class="btn btn-secondary me-2" @click="cerrarModalEliminar">Cancelar</button>
+          <button class="btn btn-danger" @click="confirmarEliminar">Eliminar</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Botón para mostrar/ocultar formulario de nueva retirada -->
     <button class="btn btn-success mb-3" @click="toggleFormulario">
       {{ mostrarFormulario ? 'Ocultar Formulario' : 'Añadir Retirada' }}
     </button>
@@ -12,27 +37,16 @@
       <div class="card-body">
         <h5 class="card-title">Nueva Retirada</h5>
         <form @submit.prevent="guardarRetirada">
-          <!-- Selección de vehículo (por matrícula, solo vehículos en "En depósito") -->
+          <!-- Selección de vehículo (solo vehículos en "En depósito") -->
           <div class="mb-3">
             <label for="vehiculoSelect" class="form-label">Selecciona Matrícula del Vehículo:</label>
-            <select
-              id="vehiculoSelect"
-              v-model="retirada.idvehiculos"
-              class="form-select"
-              @change="onVehiculoChange"
-              required
-            >
+            <select id="vehiculoSelect" v-model="retirada.idvehiculos" class="form-select" @change="onVehiculoChange" required>
               <option value="">-- Selecciona un vehículo --</option>
-              <option
-                v-for="veh in vehiculosDisponibles"
-                :key="veh.id"
-                :value="veh.id"
-              >
+              <option v-for="veh in vehiculosDisponibles" :key="veh.id" :value="veh.id">
                 {{ veh.matricula }}
               </option>
             </select>
           </div>
-
           <!-- Campos a rellenar manualmente -->
           <div class="mb-3">
             <label class="form-label">Nombre</label>
@@ -69,22 +83,22 @@
             <label class="form-label">Fecha</label>
             <input type="text" v-model="retirada.fecha" class="form-control" disabled>
           </div>
-          <!-- Agente: autocompletado según el vehículo seleccionado -->
+          <!-- Agente (autocompletado según vehículo seleccionado) -->
           <div class="mb-3">
             <label class="form-label">Agente</label>
             <input type="text" v-model="retirada.agente" class="form-control" disabled>
           </div>
-          <!-- Importe Depósito: autocompletado desde la tarifa -->
+          <!-- Importe Depósito (calculado desde tarifa) -->
           <div class="mb-3">
             <label class="form-label">Importe Depósito</label>
             <input type="text" v-model="retirada.importedeposito" class="form-control" disabled>
           </div>
-          <!-- Importe Retirada: calculado -->
+          <!-- Importe Retirada (calculado) -->
           <div class="mb-3">
             <label class="form-label">Importe Retirada</label>
             <input type="text" v-model="retirada.importeretirada" class="form-control" disabled>
           </div>
-          <!-- Total: suma de ambos importes -->
+          <!-- Total (suma de ambos importes) -->
           <div class="mb-3">
             <label class="form-label">Total</label>
             <input type="text" v-model="retirada.total" class="form-control" disabled>
@@ -121,10 +135,11 @@
           <th>Importe Depósito</th>
           <th>Total</th>
           <th>Opción de Pago</th>
+          <th v-if="isAdmin">Acciones</th>
         </tr>
       </thead>
       <tbody>
-        <tr v-for="retiro in retiradas" :key="retiro.Id">
+        <tr v-for="retiro in paginatedRetiradas" :key="retiro.idvehiculos">
           <td>{{ getMatriculaById(retiro.idvehiculos) }}</td>
           <td>{{ retiro.nombre }}</td>
           <td>{{ retiro.nif }}</td>
@@ -138,25 +153,50 @@
           <td>{{ retiro.importedeposito }}</td>
           <td>{{ retiro.total }}</td>
           <td>{{ retiro.opcionespago }}</td>
+          <td v-if="isAdmin">
+            <button class="btn btn-sm btn-warning me-2" @click="editarRetirada(retiro)">Editar</button>
+            <button class="btn btn-sm btn-danger" @click="mostrarModalEliminar(retiro)">Eliminar</button>
+          </td>
         </tr>
       </tbody>
     </table>
     <div v-else>
       <p>No hay retiradas registradas.</p>
     </div>
+    
+    <!-- Paginación para retiradas -->
+    <nav v-if="totalPagesRet > 1" aria-label="Page navigation">
+      <ul class="pagination">
+        <li class="page-item" :class="{ disabled: currentPageRet === 1 }">
+          <button class="page-link" @click="goToPageRet(currentPageRet - 1)">Anterior</button>
+        </li>
+        <li class="page-item" v-for="page in totalPagesRet" :key="page" :class="{ active: page === currentPageRet }">
+          <button class="page-link" @click="goToPageRet(page)">{{ page }}</button>
+        </li>
+        <li class="page-item" :class="{ disabled: currentPageRet === totalPagesRet }">
+          <button class="page-link" @click="goToPageRet(currentPageRet + 1)">Siguiente</button>
+        </li>
+      </ul>
+    </nav>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, computed, onMounted, watch, inject } from 'vue'
 import axios from 'axios'
 
-// Variables reactivas
+// Inyectar objeto "user" y determinar si es admin
+const user = inject('user')
+const isAdmin = computed(() => {
+  return user && user.value && user.value.role && user.value.role.toLowerCase() === 'admin'
+})
+
+// Variables reactivas para datos
+const retiradas = ref([])
 const vehiculos = ref([])
 const tarifas = ref([])
-const retiradas = ref([])
 
-// Estructura del formulario de retirada
+// Objeto reactivo para el formulario de retirada
 const retirada = ref({
   idvehiculos: '',
   nombre: '',
@@ -174,13 +214,34 @@ const retirada = ref({
 })
 
 const mostrarFormulario = ref(false)
+const mensajeExito = ref('')
+const modalExito = ref(false)
 
-// Computed para filtrar solo vehículos en "En depósito"
+// Variables para modales de eliminación
+const modalEliminar = ref(false)
+const retiradaAEliminar = ref(null)
+
+// Paginación para retiradas
+const currentPageRet = ref(1)
+const itemsPerPageRet = ref(parseInt(localStorage.getItem('itemsPerPageRet')) || 10)
+const itemsPerPageOptionsRet = [5, 10, 25, 50]
+
+watch(itemsPerPageRet, (newVal) => {
+  localStorage.setItem('itemsPerPageRet', newVal)
+})
+
+const totalPagesRet = computed(() => Math.ceil(retiradas.value.length / itemsPerPageRet.value))
+const paginatedRetiradas = computed(() => {
+  const start = (currentPageRet.value - 1) * itemsPerPageRet.value
+  return retiradas.value.slice(start, start + itemsPerPageRet.value)
+})
+
+// Computed para filtrar vehículos disponibles (estado "En depósito")
 const vehiculosDisponibles = computed(() =>
   vehiculos.value.filter(v => v.estado === 'En depósito')
 )
 
-// Función para obtener fecha/hora actual en formato 'YYYY-MM-DD HH:mm:ss'
+// Función para obtener la fecha/hora actual en formato "YYYY-MM-DD HH:mm:ss"
 function getFechaActual(dateObj) {
   const year = dateObj.getFullYear()
   const month = String(dateObj.getMonth() + 1).padStart(2, '0')
@@ -191,20 +252,17 @@ function getFechaActual(dateObj) {
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
 }
 
-// Función para formatear fecha (de 'YYYY-MM-DD HH:mm:ss' a 'DD/MM/YYYY HH:mm')
+// Función para formatear fecha; si la cadena tiene "T", se convierte a "YYYY-MM-DD HH:mm:ss"
 function formatDate(fecha) {
   if (!fecha) return 'N/A'
-  try {
-    const [datePart, timePart] = fecha.split(' ')
-    const [year, month, day] = datePart.split('-')
-    const [hours, minutes] = timePart.split(':')
-    return `${day}/${month}/${year} ${hours}:${minutes}`
-  } catch (e) {
-    return fecha
+  if (fecha.includes('T')) {
+    const d = new Date(fecha)
+    return getFechaActual(d)
   }
+  return fecha
 }
 
-// Cargar vehículos desde el backend
+// Función para cargar vehículos desde el backend
 async function cargarVehiculos() {
   try {
     const { data } = await axios.get('/vehiculos')
@@ -214,7 +272,7 @@ async function cargarVehiculos() {
   }
 }
 
-// Cargar tarifas desde el backend
+// Función para cargar tarifas desde el backend
 async function cargarTarifas() {
   try {
     const { data } = await axios.get('/tarifas')
@@ -224,7 +282,7 @@ async function cargarTarifas() {
   }
 }
 
-// Cargar retiradas desde el backend
+// Función para cargar retiradas desde el backend
 async function cargarRetiradas() {
   try {
     const { data } = await axios.get('/retiradas')
@@ -240,28 +298,23 @@ onMounted(async () => {
   await cargarRetiradas()
 })
 
-// Cuando se selecciona un vehículo, autocompletar campos
-function onVehiculoChange() {
+// Cuando se selecciona un vehículo, autocompletar campos y calcular importes
+async function onVehiculoChange() {
   const veh = vehiculos.value.find(v => v.id == retirada.value.idvehiculos)
   if (veh) {
-    // Asigna el agente del vehículo
     retirada.value.agente = veh.agente
-    // Asigna la fecha actual
     const now = new Date()
     retirada.value.fecha = getFechaActual(now)
-    // Buscar tarifa correspondiente (igualar tipovehiculo con tipo_vehiculo)
     const tarifa = tarifas.value.find(t => t.tipo_vehiculo === veh.tipovehiculo)
     if (tarifa) {
-      // Importe Depósito es el costo_base
       retirada.value.importedeposito = tarifa.costo_base.toFixed(2)
-      // Calcular diferencia en horas entre la fecha actual y la fecha de entrada del vehículo
       const fechaEntrada = new Date(veh.fechaentrada)
-      let diffHoras = (now - fechaEntrada) / (1000 * 3600)
-      // Restar las horas gratis (si el resultado es negativo, se usa 0)
-      diffHoras = Math.max(0, diffHoras - tarifa.horas_gratis)
+      const diffMinutes = (now - fechaEntrada) / (1000 * 60)
+      let diffHoras = diffMinutes / 60 - tarifa.horas_gratis
+      if (diffHoras < 0) diffHoras = 0
+      diffHoras = Math.ceil(diffHoras)
       const importeRetirada = diffHoras * tarifa.costo_hora_extra
       retirada.value.importeretirada = importeRetirada.toFixed(2)
-      // Total es la suma de ambos importes
       retirada.value.total = (parseFloat(tarifa.costo_base) + importeRetirada).toFixed(2)
     } else {
       retirada.value.importedeposito = '0.00'
@@ -271,21 +324,34 @@ function onVehiculoChange() {
   }
 }
 
-// Guardar la retirada (POST)
+// Función para guardar la retirada (POST) y mostrar modal de éxito o actualizar si es edición
+const editModeRet = ref(false)
 async function guardarRetirada() {
   try {
-    await axios.post('/retiradas', retirada.value)
-    alert('Retirada registrada exitosamente.')
-    cancelarRetirada()
-    cargarRetiradas()
+    if (editModeRet.value && retirada.value.idvehiculos) {
+      await axios.put(`/retiradas/${retirada.value.idvehiculos}`, retirada.value)
+      mensajeExito.value = 'Retirada editada exitosamente.'
+    } else {
+      await axios.post('/retiradas', retirada.value)
+      mensajeExito.value = 'Retirada registrada exitosamente.'
+    }
+    modalExito.value = true
+    setTimeout(() => {
+      modalExito.value = false
+      cancelarRetirada()
+      cargarRetiradas()
+    }, 2000)
   } catch (error) {
     console.error('Error al guardar retirada:', error)
   }
 }
 
-// Cancelar y limpiar el formulario de retirada
+// Función para cancelar y limpiar el formulario de retirada
 function cancelarRetirada() {
   mostrarFormulario.value = false
+  mensajeExito.value = ''
+  modalExito.value = false
+  editModeRet.value = false
   retirada.value = {
     idvehiculos: '',
     nombre: '',
@@ -303,11 +369,47 @@ function cancelarRetirada() {
   }
 }
 
-// Alternar la visualización del formulario
+// Función para alternar la visualización del formulario
 function toggleFormulario() {
   mostrarFormulario.value = !mostrarFormulario.value
   if (!mostrarFormulario.value) {
     cancelarRetirada()
+  }
+}
+
+// Función para editar una retirada (modo edición)
+function editarRetirada(ret) {
+  retirada.value = { ...ret }
+  editModeRet.value = true
+  mostrarFormulario.value = true
+}
+
+// Función para mostrar modal de eliminación de retirada
+function mostrarModalEliminar(ret) {
+  retiradaAEliminar.value = ret
+  modalEliminar.value = true
+}
+
+// Función para cerrar el modal de eliminación
+function cerrarModalEliminar() {
+  modalEliminar.value = false
+  retiradaAEliminar.value = null
+}
+
+// Función para confirmar la eliminación de una retirada
+async function confirmarEliminar() {
+  if (!retiradaAEliminar.value) return;
+  try {
+    await axios.delete(`/retiradas/${retiradaAEliminar.value.idvehiculos}`);
+    cerrarModalEliminar();
+    mensajeExito.value = 'Retirada eliminada exitosamente.';
+    modalExito.value = true;
+    setTimeout(() => {
+      modalExito.value = false;
+      cargarRetiradas();
+    }, 2000);
+  } catch (error) {
+    console.error('Error al eliminar retirada:', error);
   }
 }
 
@@ -316,9 +418,45 @@ function getMatriculaById(idVehiculo) {
   const veh = vehiculos.value.find(v => v.id == idVehiculo)
   return veh ? veh.matricula : 'N/A'
 }
+
+// Función para cerrar los modales al hacer clic en el fondo
+function cerrarModalGlobal() {
+  modalExito.value = false;
+  modalEliminar.value = false;
+}
+
+// Función para la paginación de retiradas
+function goToPageRet(page) {
+  if (page >= 1 && page <= totalPagesRet.value) {
+    currentPageRet.value = page;
+  }
+}
 </script>
 
 <style scoped>
+.pagination .page-item.active .page-link {
+  background-color: #0b3d91;
+  border-color: #0b3d91;
+}
+.custom-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.5);
+}
+.modal-content-custom {
+  background-color: #fff;
+  padding: 1.5rem;
+  border-radius: 0.3rem;
+  z-index: 1060;
+  min-width: 300px;
+}
 .table {
   margin-top: 20px;
 }

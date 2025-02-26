@@ -1,28 +1,53 @@
-/* snipetcode: backend/controllers/retiradasController.js */
 const db = require('../models/db');
-/* snipetcode: Generar PDF en retiradasController.js */
 const PDFDocument = require('pdfkit');
+
+// Función auxiliar para formatear fecha a "YYYY-MM-DD HH:mm:ss"
+function getMySQLDateTime(date) {
+  const d = new Date(date);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  const seconds = String(d.getSeconds()).padStart(2, '0');
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
+
+exports.deleteRetirada = async (req, res) => {
+  console.log("req.params:", req.params);
+  const { idvehiculos } = req.params; // Extraer el parámetro correctamente
+  console.log("Valor recibido para eliminación (idvehiculos):", idvehiculos);
+  const idNum = parseInt(idvehiculos, 10);
+  console.log("Valor convertido a número:", idNum);
+  try {
+    const [result] = await db.execute('DELETE FROM retiradas WHERE idvehiculos=?', [idNum]);
+    console.log("Filas afectadas:", result.affectedRows);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Retirada no encontrada' });
+    }
+    res.json({ message: 'Retirada eliminada' });
+  } catch (error) {
+    console.error('Error al eliminar retirada:', error);
+    res.status(500).json({ message: 'Error al eliminar retirada', error: error.message });
+  }
+};
+
+
 exports.getRetiradaPDF = async (req, res) => {
   const { id } = req.params;
   try {
-    const [rows] = await db.execute('SELECT * FROM retiradas WHERE Id=?', [id]);
+    const [rows] = await db.execute('SELECT * FROM retiradas WHERE id=?', [id]);
     if (rows.length === 0) {
       return res.status(404).json({ message: 'Retirada no encontrada' });
     }
     const retirada = rows[0];
-
-    // Configurar cabeceras HTTP
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `inline; filename=retirada_${id}.pdf`);
-
-    // Generar PDF con pdfkit
     const doc = new PDFDocument();
     doc.pipe(res);
-
     doc.fontSize(16).text('Comprobante de Retirada', { align: 'center' });
     doc.moveDown();
-
-    doc.fontSize(12).text(`ID Retirada: ${retirada.Id}`);
+    doc.fontSize(12).text(`ID Retirada: ${retirada.id}`);
     doc.text(`Vehículo ID: ${retirada.idvehiculos}`);
     doc.text(`Nombre: ${retirada.nombre}`);
     doc.text(`NIF: ${retirada.nif}`);
@@ -31,21 +56,10 @@ exports.getRetiradaPDF = async (req, res) => {
     doc.text(`Importe Depósito: ${retirada.importedeposito} €`);
     doc.text(`Total: ${retirada.total} €`);
     doc.text(`Pago: ${retirada.opcionespago}`);
-
     doc.end();
   } catch (error) {
     res.status(500).json({ message: 'Error al generar PDF' });
   }
-};
-
-// Si NO usas tabla tarifas:
-const tarifasStatic = {
-  'Motocicleta, aperos, motocarros y similares': 25,
-  'Turismo hasta 12 cv ó Remolques hasta 750 kg': 100,
-  'Turismos más de 12 cv ó Remolques más de 750 kg': 130,
-  'Vehículos especiales': 150,
-  'Vehículos de cortesía': 0,
-  'Chatarra': 0
 };
 
 exports.createRetirada = async (req, res) => {
@@ -57,75 +71,72 @@ exports.createRetirada = async (req, res) => {
       return res.status(404).json({ message: 'Vehículo no encontrado' });
     }
     const vehiculo = vehRows[0];
-
-    // 2) Cálculo de costo base
-    // Opción A: usando objeto static:
-    let costoBase = tarifasStatic[vehiculo.tipovehiculo] || 0;
-
-    // Opción B (parte extra): leer de la tabla tarifas
-    /*
-    let [tarifaRows] = await db.execute('SELECT * FROM tarifas WHERE tipo_vehiculo=? LIMIT 1', [vehiculo.tipovehiculo]);
-    if (tarifaRows.length > 0) {
-      const t = tarifaRows[0];
-      costoBase = t.costo_base;
+    
+    // 2) Obtener tarifa desde la BD según el tipovehiculo del vehículo
+    const [tarifaRows] = await db.execute(
+      'SELECT * FROM tarifas WHERE tipo_vehiculo=? LIMIT 1',
+      [vehiculo.tipovehiculo]
+    );
+    if (tarifaRows.length === 0) {
+      return res.status(404).json({ message: 'Tarifa no encontrada para el tipo de vehículo' });
     }
-    */
-
-    // 3) Cálculo de horas en depósito
+    const tarifa = tarifaRows[0];
+    const costoBase = tarifa.costo_base;
+    const horasGratis = tarifa.horas_gratis;
+    const costoHoraExtra = tarifa.costo_hora_extra;
+    
+    // 3) Calcular diferencia de tiempo en minutos entre la fecha actual y la fecha de entrada
     const fechaEntrada = new Date(vehiculo.fechaentrada);
-    const fechaSalida = new Date(); // al retirar
-    const diffMs = fechaSalida - fechaEntrada;
-    const diffHoras = Math.ceil(diffMs / (1000 * 60 * 60));
-
-    // Ejemplo: 1 hora gratis y 10€/hora adicional
-    let horasGratis = 1;
-    let costePorHoraExtra = 10;
-
-    // Si usas tabla tarifas con columns: horas_gratis, costo_hora_extra
-    /*
-    if (tarifaRows.length > 0) {
-      horasGratis = tarifaRows[0].horas_gratis;
-      costePorHoraExtra = tarifaRows[0].costo_hora_extra;
-    }
-    */
-
-    const horasCobrar = diffHoras > horasGratis ? diffHoras - horasGratis : 0;
-    const importedeposito = horasCobrar * costePorHoraExtra;
-
-    // 4) Calcular total
-    const total = costoBase + importedeposito;
-
+    const fechaSalida = new Date();
+    const diffMinutes = (fechaSalida - fechaEntrada) / (1000 * 60);
+    let diffHoras = diffMinutes / 60 - horasGratis;
+    if (diffHoras < 0) diffHoras = 0;
+    diffHoras = Math.ceil(diffHoras);
+    
+    // 4) Calcular importe y total
+    const importeRetirada = diffHoras * costoHoraExtra;
+    const total = costoBase + importeRetirada;
+    
     // 5) Insertar la retirada
     await db.execute(
-      `INSERT INTO retiradas
-        (idvehiculos, nombre, nif, domicilio, poblacion, provincia,
-         permiso, fecha, agente, importeretirada, importedeposito,
-         total, opcionespago)
+      `INSERT INTO retiradas 
+         (idvehiculos, nombre, nif, domicilio, poblacion, provincia, permiso, fecha, agente, importeretirada, importedeposito, total, opcionespago)
        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
-        idvehiculos, nombre, nif, domicilio, poblacion, provincia,
-        permiso, new Date(), agente, costoBase, importedeposito,
-        total, opcionespago
+        String(idvehiculos),
+        nombre,
+        nif,
+        domicilio,
+        poblacion,
+        provincia,
+        permiso,
+        getMySQLDateTime(fechaSalida),
+        agente,
+        importeRetirada,
+        costoBase,
+        total,
+        opcionespago
       ]
     );
-
-    // 6) Actualizar vehículo (fecha salida y estado)
+    
+    // 6) Actualizar el vehículo: asignar fecha de salida y cambiar estado a 'Liquidado'
     await db.execute(
       `UPDATE vehiculos
        SET fechasalida=?, estado='Liquidado'
        WHERE id=?`,
-      [fechaSalida, idvehiculos]
+      [getMySQLDateTime(fechaSalida), idvehiculos]
     );
-
-    // 7) Log
+    
+    // 7) Registrar el log
     await db.execute(
       'INSERT INTO logs (usuario, accion, fecha) VALUES (?,?,NOW())',
       [req.session.user?.username || 'Desconocido', `Retirada de vehículo ${idvehiculos}`]
     );
-
+    
     res.status(201).json({ message: 'Retirada registrada', total });
   } catch (error) {
-    res.status(500).json({ message: 'Error al crear retirada' });
+    console.error("Error al crear retirada:", error);
+    res.status(500).json({ message: 'Error al crear retirada', error: error.message });
   }
 };
 
