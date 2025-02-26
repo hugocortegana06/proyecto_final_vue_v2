@@ -4,18 +4,27 @@ const cors = require('cors');
 const mysql = require('mysql2');
 const session = require('express-session');
 const MySQLStore = require('express-mysql-session')(session);
-const tarifasRoutes = require('./routes/tarifasRoutes');
-// ...
-const app = express();
-app.use(express.json());
 
-// Habilitar CORS para que el frontend (puerto 5173) pueda acceder
+// Importación de rutas
+const tarifasRoutes = require('./routes/tarifasRoutes');
+const logRoutes = require('./routes/logRoutes');
+const authRoutes = require('./routes/authRoutes');
+const usuariosRoutes = require('./routes/usuariosRoutes');
+const vehiculosRoutes = require('./routes/vehiculosRoutes');
+const retiradasRoutes = require('./routes/retiradasRoutes');
+
+const app = express();
+
+// Habilitar CORS antes de definir las rutas
 app.use(cors({
-  origin: 'http://localhost:5173', // Puerto donde corre tu Vue
+  origin: 'http://localhost:5173',
   credentials: true
 }));
 
-// Configuración de conexión (para express-session)
+// Middleware para parsear JSON
+app.use(express.json());
+
+// Configuración de conexión para express-session
 const dbOptions = {
   host: 'localhost',
   user: 'root',
@@ -31,25 +40,20 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: false,  // true si usas HTTPS
+    secure: false,
     httpOnly: true,
-    maxAge: 1000 * 60 * 60 // 1 hora
+    maxAge: 1000 * 60 * 60
   }
 }));
 
-// Rutas (importadas de routes/)
-const authRoutes = require('./routes/authRoutes');
-const usuariosRoutes = require('./routes/usuariosRoutes');
-const vehiculosRoutes = require('./routes/vehiculosRoutes');
-const retiradasRoutes = require('./routes/retiradasRoutes');
-
+// Definir las rutas
 app.use('/api/auth', authRoutes);
 app.use('/api/usuarios', usuariosRoutes);
 app.use('/api/vehiculos', vehiculosRoutes);
 app.use('/api/retiradas', retiradasRoutes);
 app.use('/api/tarifas', tarifasRoutes);
+app.use('/api', logRoutes);
 
-// Ruta de prueba
 app.get('/', (req, res) => {
   res.send('Backend del sistema de gestión de grúa municipal');
 });

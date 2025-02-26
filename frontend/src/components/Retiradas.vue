@@ -164,13 +164,18 @@
           <td>{{ retiro.importedeposito }}</td>
           <td>{{ retiro.total }}</td>
           <td>{{ retiro.opcionespago }}</td>
-          <td v-if="isAdmin">
-            <div class="d-flex">
-              <button class="btn btn-sm btn-warning me-2" @click="editarRetirada(retiro)">Editar</button>
-              <button class="btn btn-sm btn-danger me-2" @click="mostrarModalEliminar(retiro)">Eliminar</button>
-              <button class="btn btn-sm btn-info" @click="generarFactura(retiro)">Generar Factura</button>
-            </div>
-          </td>
+          <td>
+  <div class="d-flex">
+    <!-- Botón Generar Factura, visible para todos -->
+    <button class="btn btn-sm btn-info me-2" @click="generarFactura(retiro)">Generar Factura</button>
+    <!-- Botones solo para admin -->
+    <template v-if="isAdmin">
+      <button class="btn btn-sm btn-warning me-2" @click="editarRetirada(retiro)">Editar</button>
+      <button class="btn btn-sm btn-danger" @click="mostrarModalEliminar(retiro)">Eliminar</button>
+    </template>
+  </div>
+</td>
+
         </tr>
       </tbody>
     </table>
