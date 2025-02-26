@@ -13,6 +13,98 @@ function getMySQLDateTime(date) {
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
 
+exports.getFacturaPDF = async (req, res) => {
+  const { id } = req.params; // Se espera que 'id' sea el valor de idvehiculos
+  try {
+    // Obtener la retirada (usamos idvehiculos, suponiendo que es único)
+    const [rows] = await db.execute('SELECT * FROM retiradas WHERE idvehiculos=?', [id]);
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'Retirada no encontrada' });
+    }
+    const ret = rows[0];
+
+    // (Opcional) Obtener datos del vehículo asociado para incluir más información
+    const [vehRows] = await db.execute('SELECT * FROM vehiculos WHERE id=?', [ret.idvehiculos]);
+    const veh = vehRows.length > 0 ? vehRows[0] : {};
+
+    // Generar número de expediente aleatorio de 8 dígitos
+    const randomNum = Math.floor(Math.random() * 90000000) + 10000000; // Número de 8 dígitos
+    // Obtener los últimos dos caracteres del DNI (nif): último dígito y letra
+    const dniSuffix = ret.nif ? ret.nif.slice(-2) : '';
+    const expediente = `${randomNum}-${dniSuffix}`;
+
+    // Configurar cabeceras para PDF
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename=factura_${id}.pdf`);
+
+    const doc = new PDFDocument({ size: 'A4', margin: 50 });
+    doc.pipe(res);
+
+    // Encabezado con el número de expediente generado
+    doc.fontSize(16).text(`Número Expediente - ${expediente}`, { align: 'center' });
+    doc.moveDown();
+    doc.fontSize(12).text('La Policía Local ha procedido a retirar el vehículo que se detalla a continuación, en cumplimiento de la Ordenanza Municipal reguladora.', {
+      align: 'center'
+    });
+    doc.moveDown();
+
+    // Datos del vehículo
+    doc.fontSize(14).text('DATOS DEL VEHÍCULO', { underline: true });
+    doc.moveDown(0.5);
+    doc.fontSize(12)
+      .text(`Matrícula: ${veh.matricula || 'N/A'}`)
+      .text(`Marca: ${veh.marca || 'N/A'}`)
+      .text(`Modelo: ${veh.modelo || 'N/A'}`)
+      .text(`Lugar de recogida: ${veh.lugar || 'N/A'}`)
+      .text(`Fecha de entrada: ${veh.fechaentrada ? veh.fechaentrada : 'N/A'}`);
+    doc.moveDown();
+
+    // Datos del propietario (usando datos de la retirada)
+    doc.fontSize(14).text('DATOS DEL PROPIETARIO', { underline: true });
+    doc.moveDown(0.5);
+    doc.fontSize(12)
+      .text(`Nombre: ${ret.nombre || 'N/A'}`)
+      .text(`NIF: ${ret.nif || 'N/A'}`)
+      .text(`Domicilio: ${ret.domicilio || 'N/A'}`)
+      .text(`Población: ${ret.poblacion || 'N/A'}`)
+      .text(`Provincia: ${ret.provincia || 'N/A'}`);
+    doc.moveDown();
+
+    // Datos de entrega
+    doc.fontSize(14).text('DATOS DE ENTREGA', { underline: true });
+    doc.moveDown(0.5);
+    doc.fontSize(12)
+      .text(`Agente: ${ret.agente || 'N/A'}`)
+      .text(`Fecha de retirada: ${ret.fecha || 'N/A'}`);
+    doc.moveDown();
+
+    // Importes
+    doc.fontSize(14).text('IMPORTES', { underline: true });
+    doc.moveDown(0.5);
+    doc.fontSize(12)
+      .text(`Importe Retirada: ${ret.importeretirada} €`)
+      .text(`Importe Depósito: ${ret.importedeposito} €`)
+      .text(`Total a pagar: ${ret.total} €`);
+    doc.moveDown();
+
+    // Datos de pago
+    doc.fontSize(14).text('FORMA DE PAGO', { underline: true });
+    doc.moveDown(0.5);
+    doc.fontSize(12)
+      .text(`Opción de Pago: ${ret.opcionespago || 'N/A'}`);
+    doc.moveDown();
+
+    // Pie de página
+    doc.fontSize(10).text('Factura generada el ' + new Date().toLocaleString(), { align: 'center' });
+    
+    doc.end();
+  } catch (error) {
+    console.error("Error al generar factura PDF:", error);
+    res.status(500).json({ message: 'Error al generar factura PDF', error: error.message });
+  }
+};
+
+
 exports.deleteRetirada = async (req, res) => {
   console.log("req.params:", req.params);
   const { idvehiculos } = req.params; // Extraer el parámetro correctamente
@@ -33,34 +125,7 @@ exports.deleteRetirada = async (req, res) => {
 };
 
 
-exports.getRetiradaPDF = async (req, res) => {
-  const { id } = req.params;
-  try {
-    const [rows] = await db.execute('SELECT * FROM retiradas WHERE id=?', [id]);
-    if (rows.length === 0) {
-      return res.status(404).json({ message: 'Retirada no encontrada' });
-    }
-    const retirada = rows[0];
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `inline; filename=retirada_${id}.pdf`);
-    const doc = new PDFDocument();
-    doc.pipe(res);
-    doc.fontSize(16).text('Comprobante de Retirada', { align: 'center' });
-    doc.moveDown();
-    doc.fontSize(12).text(`ID Retirada: ${retirada.id}`);
-    doc.text(`Vehículo ID: ${retirada.idvehiculos}`);
-    doc.text(`Nombre: ${retirada.nombre}`);
-    doc.text(`NIF: ${retirada.nif}`);
-    doc.text(`Fecha: ${retirada.fecha}`);
-    doc.text(`Importe Retirada: ${retirada.importeretirada} €`);
-    doc.text(`Importe Depósito: ${retirada.importedeposito} €`);
-    doc.text(`Total: ${retirada.total} €`);
-    doc.text(`Pago: ${retirada.opcionespago}`);
-    doc.end();
-  } catch (error) {
-    res.status(500).json({ message: 'Error al generar PDF' });
-  }
-};
+
 
 exports.createRetirada = async (req, res) => {
   const { idvehiculos, nombre, nif, domicilio, poblacion, provincia, permiso, agente, opcionespago } = req.body;
@@ -127,11 +192,6 @@ exports.createRetirada = async (req, res) => {
       [getMySQLDateTime(fechaSalida), idvehiculos]
     );
     
-    // 7) Registrar el log
-    await db.execute(
-      'INSERT INTO logs (usuario, accion, fecha) VALUES (?,?,NOW())',
-      [req.session.user?.username || 'Desconocido', `Retirada de vehículo ${idvehiculos}`]
-    );
     
     res.status(201).json({ message: 'Retirada registrada', total });
   } catch (error) {
@@ -148,3 +208,34 @@ exports.getRetiradas = async (req, res) => {
     res.status(500).json({ message: 'Error al obtener retiradas' });
   }
 };
+exports.updateRetirada = async (req, res) => {
+  // Asumimos que la ruta está definida como: router.put('/:id', ...),
+  // y que el parámetro "id" corresponde al valor de idvehiculos.
+  const { id } = req.params;
+  try {
+    const [result] = await db.execute(
+      `UPDATE retiradas SET
+         nombre = ?, nif = ?, domicilio = ?, poblacion = ?, provincia = ?,
+         permiso = ?, total = ?, opcionespago = ?
+       WHERE idvehiculos = ?`,
+      [
+        req.body.nombre,
+        req.body.nif,
+        req.body.domicilio,
+        req.body.poblacion,
+        req.body.provincia,
+        req.body.permiso,
+        req.body.total,
+        req.body.opcionespago,
+        id
+      ]
+    );
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Retirada no encontrada' });
+    }
+    res.json({ message: 'Retirada actualizada' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error al actualizar retirada', error: error.message });
+  }
+};
+

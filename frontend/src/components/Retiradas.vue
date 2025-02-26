@@ -32,15 +32,24 @@
       {{ mostrarFormulario ? 'Ocultar Formulario' : 'Añadir Retirada' }}
     </button>
     
-    <!-- Formulario para añadir nueva retirada -->
+    <!-- Formulario para añadir/editar retirada -->
     <div v-if="mostrarFormulario" class="card mb-3">
       <div class="card-body">
-        <h5 class="card-title">Nueva Retirada</h5>
+        <h5 class="card-title">
+          {{ editModeRet ? 'Editar Retirada' : 'Nueva Retirada' }}
+        </h5>
         <form @submit.prevent="guardarRetirada">
-          <!-- Selección de vehículo (solo vehículos en "En depósito") -->
+          <!-- Selección de vehículo (solo vehículos en "En depósito"). En modo edición se deshabilita -->
           <div class="mb-3">
             <label for="vehiculoSelect" class="form-label">Selecciona Matrícula del Vehículo:</label>
-            <select id="vehiculoSelect" v-model="retirada.idvehiculos" class="form-select" @change="onVehiculoChange" required>
+            <select 
+              id="vehiculoSelect" 
+              v-model="retirada.idvehiculos" 
+              class="form-select" 
+              @change="onVehiculoChange" 
+              required 
+              :disabled="editModeRet"
+            >
               <option value="">-- Selecciona un vehículo --</option>
               <option v-for="veh in vehiculosDisponibles" :key="veh.id" :value="veh.id">
                 {{ veh.matricula }}
@@ -83,25 +92,25 @@
             <label class="form-label">Fecha</label>
             <input type="text" v-model="retirada.fecha" class="form-control" disabled>
           </div>
-          <!-- Agente (autocompletado según vehículo seleccionado) -->
+          <!-- Agente (autocompletado según vehículo seleccionado, no editable) -->
           <div class="mb-3">
             <label class="form-label">Agente</label>
             <input type="text" v-model="retirada.agente" class="form-control" disabled>
           </div>
-          <!-- Importe Depósito (calculado desde tarifa) -->
+          <!-- Importe Depósito (calculado desde tarifa, no editable) -->
           <div class="mb-3">
             <label class="form-label">Importe Depósito</label>
             <input type="text" v-model="retirada.importedeposito" class="form-control" disabled>
           </div>
-          <!-- Importe Retirada (calculado) -->
+          <!-- Importe Retirada (calculado, no editable) -->
           <div class="mb-3">
             <label class="form-label">Importe Retirada</label>
             <input type="text" v-model="retirada.importeretirada" class="form-control" disabled>
           </div>
-          <!-- Total (suma de ambos importes) -->
+          <!-- Total (editable solo en modo edición) -->
           <div class="mb-3">
             <label class="form-label">Total</label>
-            <input type="text" v-model="retirada.total" class="form-control" disabled>
+            <input type="text" v-model="retirada.total" class="form-control" :disabled="!editModeRet" required>
           </div>
           <!-- Opción de Pago: desplegable -->
           <div class="mb-3">
@@ -112,7 +121,9 @@
               <option value="Efectivo">Efectivo</option>
             </select>
           </div>
-          <button type="submit" class="btn btn-primary">Guardar Retirada</button>
+          <button type="submit" class="btn btn-primary">
+            {{ editModeRet ? 'Actualizar' : 'Guardar Retirada' }}
+          </button>
           <button type="button" class="btn btn-secondary" @click="cancelarRetirada">Cancelar</button>
         </form>
       </div>
@@ -154,8 +165,11 @@
           <td>{{ retiro.total }}</td>
           <td>{{ retiro.opcionespago }}</td>
           <td v-if="isAdmin">
-            <button class="btn btn-sm btn-warning me-2" @click="editarRetirada(retiro)">Editar</button>
-            <button class="btn btn-sm btn-danger" @click="mostrarModalEliminar(retiro)">Eliminar</button>
+            <div class="d-flex">
+              <button class="btn btn-sm btn-warning me-2" @click="editarRetirada(retiro)">Editar</button>
+              <button class="btn btn-sm btn-danger me-2" @click="mostrarModalEliminar(retiro)">Eliminar</button>
+              <button class="btn btn-sm btn-info" @click="generarFactura(retiro)">Generar Factura</button>
+            </div>
           </td>
         </tr>
       </tbody>
@@ -252,7 +266,7 @@ function getFechaActual(dateObj) {
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
 }
 
-// Función para formatear fecha; si la cadena tiene "T", se convierte a "YYYY-MM-DD HH:mm:ss"
+// Función para formatear fecha; si contiene "T", se convierte a "YYYY-MM-DD HH:mm:ss"
 function formatDate(fecha) {
   if (!fecha) return 'N/A'
   if (fecha.includes('T')) {
@@ -324,7 +338,7 @@ async function onVehiculoChange() {
   }
 }
 
-// Función para guardar la retirada (POST) y mostrar modal de éxito o actualizar si es edición
+// Función para guardar la retirada (POST) o actualizar si es edición
 const editModeRet = ref(false)
 async function guardarRetirada() {
   try {
@@ -377,14 +391,14 @@ function toggleFormulario() {
   }
 }
 
-// Función para editar una retirada (modo edición)
+// Función para editar una retirada
 function editarRetirada(ret) {
   retirada.value = { ...ret }
   editModeRet.value = true
   mostrarFormulario.value = true
 }
 
-// Función para mostrar modal de eliminación de retirada
+// Función para mostrar modal de eliminación
 function mostrarModalEliminar(ret) {
   retiradaAEliminar.value = ret
   modalEliminar.value = true
@@ -396,7 +410,7 @@ function cerrarModalEliminar() {
   retiradaAEliminar.value = null
 }
 
-// Función para confirmar la eliminación de una retirada
+// Función para confirmar la eliminación
 async function confirmarEliminar() {
   if (!retiradaAEliminar.value) return;
   try {
@@ -411,6 +425,11 @@ async function confirmarEliminar() {
   } catch (error) {
     console.error('Error al eliminar retirada:', error);
   }
+}
+
+// Función para generar factura (abre una nueva pestaña con el PDF)
+function generarFactura(ret) {
+  window.open(`http://localhost:3000/api/retiradas/${ret.idvehiculos}/factura`, '_blank');
 }
 
 // Función para obtener la matrícula de un vehículo a partir de su ID
