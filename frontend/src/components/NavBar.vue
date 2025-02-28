@@ -46,6 +46,7 @@ class="nav-item">
       console.error('Error al cerrar sesión:', error)
     } finally {
       if (user) {
+        localStorage.removeItem('user');
         user.value = null
       }
       router.push('/')

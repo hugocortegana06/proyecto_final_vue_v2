@@ -19,7 +19,6 @@
     </div>
   </div>
 </template>
-
 <script setup>
 import { ref, inject } from 'vue'
 import axios from 'axios'
@@ -39,13 +38,14 @@ async function login() {
     const { data } = await axios.post('/auth/login', {
       username: username.value,
       password: password.value
-      
     })
     console.log('Login OK:', data)
     // Actualiza el estado global con los datos del usuario
     if (user) {
       user.value = data.user
     }
+    // Guarda en localStorage para que el router lo detecte
+    localStorage.setItem('user', JSON.stringify(data.user))
     // Redirige a la ruta de vehículos
     router.push('/vehiculos')
   } catch (err) {

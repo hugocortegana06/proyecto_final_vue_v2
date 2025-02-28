@@ -54,23 +54,26 @@ exports.logout = (req, res) => {
   db.execute(
     'INSERT INTO logs (user_id, username, action) VALUES (?, ?, ?)',
     [userSession.id, userSession.username, 'Cierre de sesión']
-  ).then(() => {
-    // Luego destruir la sesión
+  )
+  .then(() => {
     req.session.destroy(err => {
       if (err) {
         console.error('Error al destruir la sesión:', err);
         res.clearCookie('session_cookie_name');
         return res.status(500).json({ message: 'Error al cerrar sesión' });
       }
+      // No uses localStorage aquí; este manejo se debe hacer en el frontend.
       console.log('Sesión destruida correctamente');
       res.clearCookie('session_cookie_name');
       res.json({ message: 'Logout exitoso' });
     });
-  }).catch(error => {
+  })
+  .catch(error => {
     console.error('Error al insertar log de cierre de sesión:', error);
     res.status(500).json({ message: 'Error al registrar cierre de sesión' });
   });
 };
+
 
 exports.isLoggedIn = (req, res) => {
   if (req.session.user) {
