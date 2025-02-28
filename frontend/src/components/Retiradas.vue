@@ -39,64 +39,68 @@
           {{ editModeRet ? 'Editar Retirada' : 'Nueva Retirada' }}
         </h5>
         <form @submit.prevent="guardarRetirada">
-          <!-- Selección de vehículo (solo vehículos en "En depósito"). En edición se deshabilita -->
+          <!-- Selección de vehículo: si estamos en modo edición, se muestra como campo no editable -->
           <div class="mb-3">
-            <label for="vehiculoSelect" class="form-label">Selecciona Matrícula del Vehículo:</label>
-            <select 
-              id="vehiculoSelect" 
-              v-model="retirada.idvehiculos" 
-              class="form-select" 
-              @change="onVehiculoChange" 
-               
-              :disabled="editModeRet"
-            >
-              <option value="">-- Selecciona un vehículo --</option>
-              <option v-for="veh in vehiculosDisponibles" :key="veh.id" :value="veh.id">
-                {{ veh.matricula }}
-              </option>
-            </select>
+            <label class="form-label">Matrícula del Vehículo:</label>
+            <template v-if="editModeRet">
+              <input type="text" :value="getMatriculaById(retirada.idvehiculos)" class="form-control" disabled />
+            </template>
+            <template v-else>
+              <select 
+                id="vehiculoSelect" 
+                v-model="retirada.idvehiculos" 
+                class="form-select" 
+                @change="onVehiculoChange" 
+                required
+              >
+                <option value="">-- Selecciona un vehículo --</option>
+                <option v-for="veh in vehiculosDisponibles" :key="veh.id" :value="veh.id">
+                  {{ veh.matricula }}
+                </option>
+              </select>
+            </template>
             <small v-if="errors.idvehiculos" class="text-danger">{{ errors.idvehiculos }}</small>
           </div>
           
           <!-- Nombre -->
           <div class="mb-3">
             <label class="form-label">Nombre</label>
-            <input type="text" v-model="retirada.nombre" class="form-control" placeholder="Ingresa nombre" >
+            <input type="text" v-model="retirada.nombre" class="form-control" placeholder="Ingresa nombre">
             <small v-if="errors.nombre" class="text-danger">{{ errors.nombre }}</small>
           </div>
           
           <!-- NIF -->
           <div class="mb-3">
             <label class="form-label">NIF</label>
-            <input type="text" v-model="retirada.nif" class="form-control" placeholder="Ingresa NIF" >
+            <input type="text" v-model="retirada.nif" class="form-control" placeholder="Ingresa NIF">
             <small v-if="errors.nif" class="text-danger">{{ errors.nif }}</small>
           </div>
           
           <!-- Domicilio -->
           <div class="mb-3">
             <label class="form-label">Domicilio</label>
-            <input type="text" v-model="retirada.domicilio" class="form-control" placeholder="Ingresa domicilio" >
+            <input type="text" v-model="retirada.domicilio" class="form-control" placeholder="Ingresa domicilio">
             <small v-if="errors.domicilio" class="text-danger">{{ errors.domicilio }}</small>
           </div>
           
           <!-- Población -->
           <div class="mb-3">
             <label class="form-label">Población</label>
-            <input type="text" v-model="retirada.poblacion" class="form-control" placeholder="Ingresa población" >
+            <input type="text" v-model="retirada.poblacion" class="form-control" placeholder="Ingresa población">
             <small v-if="errors.poblacion" class="text-danger">{{ errors.poblacion }}</small>
           </div>
           
           <!-- Provincia -->
           <div class="mb-3">
             <label class="form-label">Provincia</label>
-            <input type="text" v-model="retirada.provincia" class="form-control" placeholder="Ingresa provincia" >
+            <input type="text" v-model="retirada.provincia" class="form-control" placeholder="Ingresa provincia">
             <small v-if="errors.provincia" class="text-danger">{{ errors.provincia }}</small>
           </div>
           
           <!-- Permiso -->
           <div class="mb-3">
             <label class="form-label">Permiso</label>
-            <select v-model="retirada.permiso" class="form-select" >
+            <select v-model="retirada.permiso" class="form-select" required>
               <option value="">-- Selecciona permiso --</option>
               <option value="A">A</option>
               <option value="B">B</option>
@@ -132,14 +136,14 @@
           <!-- Total (editable solo en modo edición) -->
           <div class="mb-3">
             <label class="form-label">Total</label>
-            <input type="text" v-model="retirada.total" class="form-control" :disabled="!editModeRet" >
+            <input type="text" v-model="retirada.total" class="form-control" :disabled="!editModeRet" required>
             <small v-if="errors.total" class="text-danger">{{ errors.total }}</small>
           </div>
           
           <!-- Opción de Pago -->
           <div class="mb-3">
             <label class="form-label">Opción de Pago</label>
-            <select v-model="retirada.opcionespago" class="form-select" >
+            <select v-model="retirada.opcionespago" class="form-select" required>
               <option value="">-- Selecciona opción --</option>
               <option value="Tarjeta">Tarjeta</option>
               <option value="Efectivo">Efectivo</option>
@@ -379,7 +383,7 @@ async function onVehiculoChange() {
   }
 }
 
-// Función de validación del formulario
+// Función de validación del formulario de retirada
 function validarRetirada() {
   let valido = true;
   errors.value = {

@@ -53,7 +53,6 @@ exports.createVehiculo = async (req, res) => {
       estado
     } = req.body;
     
-    // Estado por defecto si no se envía
     estado = estado || 'En depósito';
     
     // Formatear las fechas
@@ -73,7 +72,7 @@ exports.createVehiculo = async (req, res) => {
       lugar || null,
       direccion || null,
       agente || null,
-      matricula,         // Matrícula se ingresa en el formulario
+      matricula,
       marca || null,
       modelo || null,
       color || null,
@@ -82,6 +81,16 @@ exports.createVehiculo = async (req, res) => {
       grua || null,
       estado
     ]);
+    
+    // Insertar log: "Añade vehículo con matrícula XXX"
+    await db.execute(
+      'INSERT INTO logs (user_id, username, action) VALUES (?, ?, ?)',
+      [
+        req.session.user ? req.session.user.id : 0,
+        req.session.user ? req.session.user.username : 'Desconocido',
+        `Añade vehículo con matrícula ${matricula}`
+      ]
+    );
     
     return res.json({ message: "Vehículo creado exitosamente" });
   } catch (error) {
@@ -118,8 +127,18 @@ exports.updateVehiculo = async (req, res) => {
         id
       ]
     );
-    // (Opcional) Inserción en logs, etc.
-    return res.json({ message: 'Vehículo actualizado' });
+    
+    // Insertar log: "Editó vehículo con matrícula XXX"
+    await db.execute(
+      'INSERT INTO logs (user_id, username, action) VALUES (?, ?, ?)',
+      [
+        req.session.user ? req.session.user.id : 0,
+        req.session.user ? req.session.user.username : 'Desconocido',
+        `Editó vehículo con matrícula ${matricula}`
+      ]
+    );
+    
+    res.json({ message: 'Vehículo actualizado' });
   } catch (err) {
     console.error('Error al actualizar vehículo:', err);
     return res.status(500).json({ message: 'Error al actualizar vehículo' });
@@ -132,12 +151,22 @@ exports.updateVehiculo = async (req, res) => {
 exports.deleteVehiculo = async (req, res) => {
   const { id } = req.params;
   try {
+    // Obtener el registro para extraer la matrícula (antes de eliminar)
+    const [vehRows] = await db.execute('SELECT matricula FROM vehiculos WHERE id=?', [id]);
+    const matricula = vehRows.length > 0 ? vehRows[0].matricula : 'N/A';
+    
     await db.execute('DELETE FROM vehiculos WHERE id=?', [id]);
-    // Comenta la inserción en logs para aislar el problema
-    // await db.execute(
-    //   'INSERT INTO logs (usuario, accion, fecha) VALUES (?,?,NOW())',
-    //   [req.session.user?.username || 'Desconocido', `Eliminó vehículo ${id}`]
-    // );
+    
+    // Insertar log: "Eliminó vehículo con matrícula XXX"
+    await db.execute(
+      'INSERT INTO logs (user_id, username, action) VALUES (?, ?, ?)',
+      [
+        req.session.user ? req.session.user.id : 0,
+        req.session.user ? req.session.user.username : 'Desconocido',
+        `Eliminó vehículo con matrícula ${matricula}`
+      ]
+    );
+    
     res.json({ message: 'Vehículo eliminado' });
   } catch (error) {
     console.error("Error al eliminar vehículo:", error);

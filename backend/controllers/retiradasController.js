@@ -23,15 +23,25 @@ exports.getFacturaPDF = async (req, res) => {
     }
     const ret = rows[0];
 
-    // (Opcional) Obtener datos del vehículo asociado para incluir más información
+    // Obtener datos del vehículo asociado para incluir más información
     const [vehRows] = await db.execute('SELECT * FROM vehiculos WHERE id=?', [ret.idvehiculos]);
     const veh = vehRows.length > 0 ? vehRows[0] : {};
 
     // Generar número de expediente aleatorio de 8 dígitos
     const randomNum = Math.floor(Math.random() * 90000000) + 10000000; // Número de 8 dígitos
-    // Obtener los últimos dos caracteres del DNI (nif): último dígito y letra
+    // Obtener los últimos dos caracteres del NIF: último dígito y letra
     const dniSuffix = ret.nif ? ret.nif.slice(-2) : '';
     const expediente = `${randomNum}-${dniSuffix}`;
+
+    // Insertar en logs la acción de generar factura
+    await db.execute(
+      'INSERT INTO logs (user_id, username, action) VALUES (?, ?, ?)',
+      [
+        req.session.user ? req.session.user.id : 0,
+        req.session.user ? req.session.user.username : 'Desconocido',
+        `Generó factura para retirada del vehículo con matrícula ${veh.matricula || 'N/A'}`
+      ]
+    );
 
     // Configurar cabeceras para PDF
     res.setHeader('Content-Type', 'application/pdf');
@@ -96,15 +106,13 @@ exports.getFacturaPDF = async (req, res) => {
 
     // Pie de página
     doc.fontSize(10).text('Factura generada el ' + new Date().toLocaleString(), { align: 'center' });
-    
+
     doc.end();
   } catch (error) {
     console.error("Error al generar factura PDF:", error);
     res.status(500).json({ message: 'Error al generar factura PDF', error: error.message });
   }
 };
-
-
 exports.deleteRetirada = async (req, res) => {
   console.log("req.params:", req.params);
   const { idvehiculos } = req.params; // Extraer el parámetro correctamente
@@ -117,15 +125,27 @@ exports.deleteRetirada = async (req, res) => {
     if (result.affectedRows === 0) {
       return res.status(404).json({ message: 'Retirada no encontrada' });
     }
+    // Obtener la matrícula del vehículo desde la tabla "vehiculos"
+    const [vehRows] = await db.execute('SELECT matricula FROM vehiculos WHERE id=?', [idNum]);
+    let matricula = 'N/A';
+    if (vehRows.length > 0) {
+      matricula = vehRows[0].matricula;
+    }
+    // Insertar registro en logs con la acción de eliminación
+    await db.execute(
+      'INSERT INTO logs (user_id, username, action) VALUES (?, ?, ?)',
+      [
+        req.session.user ? req.session.user.id : 0,
+        req.session.user ? req.session.user.username : 'Desconocido',
+        `Eliminó retirada para vehículo con matrícula ${matricula}`
+      ]
+    );
     res.json({ message: 'Retirada eliminada' });
   } catch (error) {
     console.error('Error al eliminar retirada:', error);
     res.status(500).json({ message: 'Error al eliminar retirada', error: error.message });
   }
 };
-
-
-
 
 exports.createRetirada = async (req, res) => {
   const { idvehiculos, nombre, nif, domicilio, poblacion, provincia, permiso, agente, opcionespago } = req.body;
@@ -192,6 +212,15 @@ exports.createRetirada = async (req, res) => {
       [getMySQLDateTime(fechaSalida), idvehiculos]
     );
     
+    // 7) Insertar log para la acción de crear la retirada
+    await db.execute(
+      'INSERT INTO logs (user_id, username, action) VALUES (?, ?, ?)',
+      [
+        req.session.user ? req.session.user.id : 0,
+        req.session.user ? req.session.user.username : 'Desconocido',
+        `Añadió retirada para vehículo con matrícula ${vehiculo.matricula || 'N/A'}`
+      ]
+    );
     
     res.status(201).json({ message: 'Retirada registrada', total });
   } catch (error) {
@@ -209,8 +238,7 @@ exports.getRetiradas = async (req, res) => {
   }
 };
 exports.updateRetirada = async (req, res) => {
-  // Asumimos que la ruta está definida como: router.put('/:id', ...),
-  // y que el parámetro "id" corresponde al valor de idvehiculos.
+  // Se espera que el parámetro "id" corresponda al valor de idvehiculos
   const { id } = req.params;
   try {
     const [result] = await db.execute(
@@ -233,6 +261,21 @@ exports.updateRetirada = async (req, res) => {
     if (result.affectedRows === 0) {
       return res.status(404).json({ message: 'Retirada no encontrada' });
     }
+    // Obtener la matrícula del vehículo a partir del idvehiculos
+    const [vehRows] = await db.execute('SELECT matricula FROM vehiculos WHERE id = ?', [id]);
+    let matricula = 'N/A';
+    if (vehRows.length > 0) {
+      matricula = vehRows[0].matricula;
+    }
+    // Insertar log para la acción de actualizar la retirada
+    await db.execute(
+      'INSERT INTO logs (user_id, username, action) VALUES (?, ?, ?)',
+      [
+        req.session.user ? req.session.user.id : 0,
+        req.session.user ? req.session.user.username : 'Desconocido',
+        `Editó retirada para vehículo con matrícula ${matricula}`
+      ]
+    );
     res.json({ message: 'Retirada actualizada' });
   } catch (error) {
     res.status(500).json({ message: 'Error al actualizar retirada', error: error.message });
