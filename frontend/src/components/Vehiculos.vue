@@ -21,9 +21,7 @@
           <strong>{{ vehiculoAEliminar?.matricula }}</strong>?
         </p>
         <div class="d-flex justify-content-end">
-          <button class="btn btn-secondary me-2" @click="cerrarModalEliminar">
-            Cancelar
-          </button>
+          <button class="btn btn-secondary me-2" @click="cerrarModalEliminar">Cancelar</button>
           <button class="btn btn-danger" @click="confirmarEliminar">Eliminar</button>
         </div>
       </div>
@@ -76,42 +74,49 @@
           <div class="mb-3">
             <label class="form-label">Lugar</label>
             <input type="text" v-model="nuevoVehiculo.lugar" class="form-control" />
+            <small v-if="errors.lugar" class="text-danger">{{ errors.lugar }}</small>
           </div>
           <!-- Dirección -->
           <div class="mb-3">
             <label class="form-label">Dirección</label>
             <input type="text" v-model="nuevoVehiculo.direccion" class="form-control" />
+            <small v-if="errors.direccion" class="text-danger">{{ errors.direccion }}</small>
           </div>
           <!-- Agente -->
           <div class="mb-3">
             <label class="form-label">Agente</label>
             <input type="text" v-model="nuevoVehiculo.agente" class="form-control" />
+            <small v-if="errors.agente" class="text-danger">{{ errors.agente }}</small>
           </div>
           <!-- Matrícula (campo obligatorio con validación) -->
           <div class="mb-3">
             <label class="form-label">Matrícula</label>
-            <input type="text" v-model="nuevoVehiculo.matricula" class="form-control" :class="{ 'is-invalid': errorMatricula }" required />
-            <div class="invalid-feedback">{{ errorMatricula }}</div>
+            <input type="text" v-model="nuevoVehiculo.matricula" class="form-control" :class="{ 'is-invalid': errors.matricula }"  />
+            <div class="invalid-feedback">{{ errors.matricula }}</div>
           </div>
           <!-- Marca -->
           <div class="mb-3">
             <label class="form-label">Marca</label>
             <input type="text" v-model="nuevoVehiculo.marca" class="form-control" />
+            <small v-if="errors.marca" class="text-danger">{{ errors.marca }}</small>
           </div>
           <!-- Modelo -->
           <div class="mb-3">
             <label class="form-label">Modelo</label>
             <input type="text" v-model="nuevoVehiculo.modelo" class="form-control" />
+            <small v-if="errors.modelo" class="text-danger">{{ errors.modelo }}</small>
           </div>
           <!-- Color -->
           <div class="mb-3">
             <label class="form-label">Color</label>
             <input type="text" v-model="nuevoVehiculo.color" class="form-control" />
+            <small v-if="errors.color" class="text-danger">{{ errors.color }}</small>
           </div>
           <!-- Motivo -->
           <div class="mb-3">
             <label class="form-label">Motivo</label>
             <input type="text" v-model="nuevoVehiculo.motivo" class="form-control" />
+            <small v-if="errors.motivo" class="text-danger">{{ errors.motivo }}</small>
           </div>
           <!-- Tipo de Vehículo (desplegable) -->
           <div class="mb-3">
@@ -124,17 +129,19 @@
                 Turismo hasta 12 cv ó Remolques hasta 750 kg
               </option>
               <option value="Turismos más de 12 cv ó Remolques más de 750 kg">
-                Turismos más de 12 cv ó Remolques más de 750 kg
+                Turismos más de 12 cv ó Remolques hasta 750 kg
               </option>
               <option value="Vehículos especiales">Vehículos especiales</option>
               <option value="Vehículos de cortesía">Vehículos de cortesía</option>
               <option value="Chatarra">Chatarra</option>
             </select>
+            <small v-if="errors.tipovehiculo" class="text-danger">{{ errors.tipovehiculo }}</small>
           </div>
           <!-- Grua -->
           <div class="mb-3">
             <label class="form-label">Grua</label>
             <input type="text" v-model="nuevoVehiculo.grua" class="form-control" />
+            <small v-if="errors.grua" class="text-danger">{{ errors.grua }}</small>
           </div>
           <!-- Estado (fijo en 'En depósito') -->
           <div class="mb-3">
@@ -205,7 +212,7 @@
 import { ref, computed, onMounted, watch, inject } from 'vue'
 import axios from 'axios'
 
-// Inyectar objeto "user" y determinar si es admin (debes proveerlo en el componente padre)
+// Inyectar objeto "user" y determinar si es admin
 const user = inject('user')
 const isAdmin = computed(() => {
   return user && user.value && user.value.role && user.value.role.toLowerCase() === 'admin'
@@ -271,6 +278,18 @@ const nuevoVehiculo = ref({
 
 // Validación y modal de éxito
 const errorMatricula = ref('')
+const errors = ref({
+  matricula: "",
+  lugar: "",
+  direccion: "",
+  agente: "",
+  marca: "",
+  modelo: "",
+  color: "",
+  motivo: "",
+  tipovehiculo: "",
+  grua: ""
+})
 const mensajeExito = ref('')
 const modalExito = ref(false)
 
@@ -278,15 +297,14 @@ const modalExito = ref(false)
 const modalEliminar = ref(false)
 const vehiculoAEliminar = ref(null)
 
-// Función para formatear fecha (si tiene "T", se convierte; de lo contrario, se asume ya en el formato deseado)
+// Función para formatear fecha (si contiene "T", se convierte; de lo contrario, se asume ya en el formato deseado)
 function formatDate(fecha) {
   if (!fecha) return 'N/A'
   if (fecha.includes('T')) {
     const d = new Date(fecha)
     return getFechaActual(d)
-  } else {
-    return fecha
   }
+  return fecha
 }
 
 // Función para obtener fecha/hora actual en formato 'YYYY-MM-DD HH:mm:ss'
@@ -300,7 +318,7 @@ function getFechaActual(dateObj) {
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
 }
 
-// Cargar vehículos desde el backend
+// Función para cargar vehículos desde el backend
 async function cargarVehiculos() {
   try {
     const { data } = await axios.get('/vehiculos')
@@ -310,20 +328,8 @@ async function cargarVehiculos() {
   }
 }
 
-// Cargar retiradas desde el backend
-async function cargarRetiradas() {
-  try {
-    const { data } = await axios.get('/retiradas')
-    retiradas.value = data
-  } catch (error) {
-    console.error('Error al cargar retiradas:', error)
-  }
-}
-
 onMounted(async () => {
   await cargarVehiculos()
-  await cargarRetiradas()
-  // Al montar, asignar fecha actual al nuevo vehículo para el formulario (si se requiere)
   const now = new Date()
   nuevoVehiculo.value.fechaentrada = getFechaActual(now)
 })
@@ -347,7 +353,18 @@ function toggleFormulario() {
 function cancelarFormulario() {
   mostrarFormulario.value = false
   errorMatricula.value = ''
-  editMode.value = false
+  errors.value = {
+    matricula: "",
+    lugar: "",
+    direccion: "",
+    agente: "",
+    marca: "",
+    modelo: "",
+    color: "",
+    motivo: "",
+    tipovehiculo: "",
+    grua: ""
+  }
   mensajeExito.value = ''
   modalExito.value = false
   modalEliminar.value = false
@@ -370,81 +387,126 @@ function cancelarFormulario() {
   }
 }
 
-// Validar formulario de vehículo (ejemplo: validar matrícula)
+// Función de validación del formulario de vehículo
 function validarVehiculo() {
-  let isOk = true
-  errorMatricula.value = ''
-  if (!nuevoVehiculo.value.matricula || nuevoVehiculo.value.matricula.length < 3) {
-    errorMatricula.value = 'La matrícula debe tener al menos 3 caracteres.'
-    isOk = false
+  let isValid = true;
+  errors.value = {
+    matricula: "",
+    lugar: "",
+    direccion: "",
+    agente: "",
+    marca: "",
+    modelo: "",
+    color: "",
+    motivo: "",
+    tipovehiculo: "",
+    grua: ""
+  };
+  if (!nuevoVehiculo.value.matricula || nuevoVehiculo.value.matricula.trim().length < 3) {
+    errors.value.matricula = "La matrícula debe tener al menos 3 caracteres.";
+    isValid = false;
   }
-  return isOk
+  if (!nuevoVehiculo.value.lugar.trim()) {
+    errors.value.lugar = "El campo Lugar es obligatorio.";
+    isValid = false;
+  }
+  if (!nuevoVehiculo.value.direccion.trim()) {
+    errors.value.direccion = "El campo Dirección es obligatorio.";
+    isValid = false;
+  }
+  if (!nuevoVehiculo.value.agente.trim()) {
+    errors.value.agente = "El campo Agente es obligatorio.";
+    isValid = false;
+  }
+  if (!nuevoVehiculo.value.marca.trim()) {
+    errors.value.marca = "El campo Marca es obligatorio.";
+    isValid = false;
+  }
+  if (!nuevoVehiculo.value.modelo.trim()) {
+    errors.value.modelo = "El campo Modelo es obligatorio.";
+    isValid = false;
+  }
+  if (!nuevoVehiculo.value.color.trim()) {
+    errors.value.color = "El campo Color es obligatorio.";
+    isValid = false;
+  }
+  if (!nuevoVehiculo.value.motivo.trim()) {
+    errors.value.motivo = "El campo Motivo es obligatorio.";
+    isValid = false;
+  }
+  if (!nuevoVehiculo.value.tipovehiculo) {
+    errors.value.tipovehiculo = "Debes seleccionar un Tipo de Vehículo.";
+    isValid = false;
+  }
+  if (!nuevoVehiculo.value.grua.trim()) {
+    errors.value.grua = "El campo Grua es obligatorio.";
+    isValid = false;
+  }
+  return isValid;
 }
 
-// Guardar vehículo (POST o PUT)
+// Función para guardar vehículo (POST o PUT)
 async function guardarVehiculo() {
-  if (!validarVehiculo()) return
+  if (!validarVehiculo()) return;
   try {
     if (editMode.value && nuevoVehiculo.value.id) {
-      // PUT para actualizar
       await axios.put(`/vehiculos/${nuevoVehiculo.value.id}`, nuevoVehiculo.value)
-      mensajeExito.value = 'Vehículo editado exitosamente.'
+      mensajeExito.value = 'Vehículo editado exitosamente.';
     } else {
-      // POST para crear
       await axios.post('/vehiculos', nuevoVehiculo.value)
-      mensajeExito.value = 'Vehículo creado exitosamente.'
+      mensajeExito.value = 'Vehículo creado exitosamente.';
     }
-    await cargarVehiculos()
-    modalExito.value = true
+    modalExito.value = true;
     setTimeout(() => {
-      modalExito.value = false
-      cancelarFormulario()
-    }, 2000)
+      modalExito.value = false;
+      cancelarFormulario();
+      cargarVehiculos();
+    }, 2000);
   } catch (error) {
-    console.error('Error al guardar vehículo:', error)
+    console.error('Error al guardar vehículo:', error);
   }
 }
 
 // Función para editar vehículo (modo edición)
 function editarVehiculo(veh) {
-  nuevoVehiculo.value = { ...veh }
-  editMode.value = true
-  mostrarFormulario.value = true
+  nuevoVehiculo.value = { ...veh };
+  editMode.value = true;
+  mostrarFormulario.value = true;
 }
 
 // Función para mostrar modal de eliminación
 function mostrarModalEliminar(veh) {
-  vehiculoAEliminar.value = veh
-  modalEliminar.value = true
+  vehiculoAEliminar.value = veh;
+  modalEliminar.value = true;
 }
 
 // Función para cerrar modal de eliminación
 function cerrarModalEliminar() {
-  modalEliminar.value = false
-  vehiculoAEliminar.value = null
+  modalEliminar.value = false;
+  vehiculoAEliminar.value = null;
 }
 
 // Función para confirmar eliminación de vehículo
 async function confirmarEliminar() {
-  if (!vehiculoAEliminar.value) return
+  if (!vehiculoAEliminar.value) return;
   try {
-    await axios.delete(`/vehiculos/${vehiculoAEliminar.value.id}`)
-    cerrarModalEliminar()
-    mensajeExito.value = 'Vehículo eliminado exitosamente.'
-    modalExito.value = true
+    await axios.delete(`/vehiculos/${vehiculoAEliminar.value.id}`);
+    cerrarModalEliminar();
+    mensajeExito.value = 'Vehículo eliminado exitosamente.';
+    modalExito.value = true;
     setTimeout(() => {
-      modalExito.value = false
-      cargarVehiculos()
-    }, 2000)
+      modalExito.value = false;
+      cargarVehiculos();
+    }, 2000);
   } catch (error) {
-    console.error('Error al eliminar vehículo:', error)
+    console.error('Error al eliminar vehículo:', error);
   }
 }
 
 // Función para obtener la matrícula de un vehículo a partir de su ID
 function getMatriculaById(idVehiculo) {
-  const veh = vehiculos.value.find(v => v.id == idVehiculo)
-  return veh ? veh.matricula : 'N/A'
+  const veh = vehiculos.value.find(v => v.id == idVehiculo);
+  return veh ? veh.matricula : 'N/A';
 }
 </script>
 
@@ -453,7 +515,6 @@ function getMatriculaById(idVehiculo) {
   background-color: #0b3d91;
   border-color: #0b3d91;
 }
-
 .custom-modal {
   position: fixed;
   top: 0;
@@ -466,7 +527,6 @@ function getMatriculaById(idVehiculo) {
   justify-content: center;
   background-color: rgba(0, 0, 0, 0.5);
 }
-
 .modal-content-custom {
   background-color: #fff;
   padding: 1.5rem;
@@ -474,7 +534,6 @@ function getMatriculaById(idVehiculo) {
   z-index: 1060;
   min-width: 300px;
 }
-
 .table {
   margin-top: 20px;
 }

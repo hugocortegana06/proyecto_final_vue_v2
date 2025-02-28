@@ -39,7 +39,7 @@
           {{ editModeRet ? 'Editar Retirada' : 'Nueva Retirada' }}
         </h5>
         <form @submit.prevent="guardarRetirada">
-          <!-- Selección de vehículo (solo vehículos en "En depósito"). En modo edición se deshabilita -->
+          <!-- Selección de vehículo (solo vehículos en "En depósito"). En edición se deshabilita -->
           <div class="mb-3">
             <label for="vehiculoSelect" class="form-label">Selecciona Matrícula del Vehículo:</label>
             <select 
@@ -47,7 +47,7 @@
               v-model="retirada.idvehiculos" 
               class="form-select" 
               @change="onVehiculoChange" 
-              required 
+               
               :disabled="editModeRet"
             >
               <option value="">-- Selecciona un vehículo --</option>
@@ -55,72 +55,98 @@
                 {{ veh.matricula }}
               </option>
             </select>
+            <small v-if="errors.idvehiculos" class="text-danger">{{ errors.idvehiculos }}</small>
           </div>
-          <!-- Campos a rellenar manualmente -->
+          
+          <!-- Nombre -->
           <div class="mb-3">
             <label class="form-label">Nombre</label>
-            <input type="text" v-model="retirada.nombre" class="form-control" placeholder="Ingresa nombre" required>
+            <input type="text" v-model="retirada.nombre" class="form-control" placeholder="Ingresa nombre" >
+            <small v-if="errors.nombre" class="text-danger">{{ errors.nombre }}</small>
           </div>
+          
+          <!-- NIF -->
           <div class="mb-3">
             <label class="form-label">NIF</label>
-            <input type="text" v-model="retirada.nif" class="form-control" placeholder="Ingresa NIF" required>
+            <input type="text" v-model="retirada.nif" class="form-control" placeholder="Ingresa NIF" >
+            <small v-if="errors.nif" class="text-danger">{{ errors.nif }}</small>
           </div>
+          
+          <!-- Domicilio -->
           <div class="mb-3">
             <label class="form-label">Domicilio</label>
-            <input type="text" v-model="retirada.domicilio" class="form-control" placeholder="Ingresa domicilio" required>
+            <input type="text" v-model="retirada.domicilio" class="form-control" placeholder="Ingresa domicilio" >
+            <small v-if="errors.domicilio" class="text-danger">{{ errors.domicilio }}</small>
           </div>
+          
+          <!-- Población -->
           <div class="mb-3">
             <label class="form-label">Población</label>
-            <input type="text" v-model="retirada.poblacion" class="form-control" placeholder="Ingresa población" required>
+            <input type="text" v-model="retirada.poblacion" class="form-control" placeholder="Ingresa población" >
+            <small v-if="errors.poblacion" class="text-danger">{{ errors.poblacion }}</small>
           </div>
+          
+          <!-- Provincia -->
           <div class="mb-3">
             <label class="form-label">Provincia</label>
-            <input type="text" v-model="retirada.provincia" class="form-control" placeholder="Ingresa provincia" required>
+            <input type="text" v-model="retirada.provincia" class="form-control" placeholder="Ingresa provincia" >
+            <small v-if="errors.provincia" class="text-danger">{{ errors.provincia }}</small>
           </div>
-          <!-- Permiso: desplegable -->
+          
+          <!-- Permiso -->
           <div class="mb-3">
             <label class="form-label">Permiso</label>
-            <select v-model="retirada.permiso" class="form-select" required>
+            <select v-model="retirada.permiso" class="form-select" >
               <option value="">-- Selecciona permiso --</option>
               <option value="A">A</option>
               <option value="B">B</option>
               <option value="C">C</option>
             </select>
+            <small v-if="errors.permiso" class="text-danger">{{ errors.permiso }}</small>
           </div>
+          
           <!-- Fecha actual (no editable) -->
           <div class="mb-3">
             <label class="form-label">Fecha</label>
             <input type="text" v-model="retirada.fecha" class="form-control" disabled>
           </div>
-          <!-- Agente (autocompletado según vehículo seleccionado, no editable) -->
+          
+          <!-- Agente (autocompletado, no editable) -->
           <div class="mb-3">
             <label class="form-label">Agente</label>
             <input type="text" v-model="retirada.agente" class="form-control" disabled>
           </div>
-          <!-- Importe Depósito (calculado desde tarifa, no editable) -->
+          
+          <!-- Importe Depósito (calculado, no editable) -->
           <div class="mb-3">
             <label class="form-label">Importe Depósito</label>
             <input type="text" v-model="retirada.importedeposito" class="form-control" disabled>
           </div>
+          
           <!-- Importe Retirada (calculado, no editable) -->
           <div class="mb-3">
             <label class="form-label">Importe Retirada</label>
             <input type="text" v-model="retirada.importeretirada" class="form-control" disabled>
           </div>
+          
           <!-- Total (editable solo en modo edición) -->
           <div class="mb-3">
             <label class="form-label">Total</label>
-            <input type="text" v-model="retirada.total" class="form-control" :disabled="!editModeRet" required>
+            <input type="text" v-model="retirada.total" class="form-control" :disabled="!editModeRet" >
+            <small v-if="errors.total" class="text-danger">{{ errors.total }}</small>
           </div>
-          <!-- Opción de Pago: desplegable -->
+          
+          <!-- Opción de Pago -->
           <div class="mb-3">
             <label class="form-label">Opción de Pago</label>
-            <select v-model="retirada.opcionespago" class="form-select" required>
+            <select v-model="retirada.opcionespago" class="form-select" >
               <option value="">-- Selecciona opción --</option>
               <option value="Tarjeta">Tarjeta</option>
               <option value="Efectivo">Efectivo</option>
             </select>
+            <small v-if="errors.opcionespago" class="text-danger">{{ errors.opcionespago }}</small>
           </div>
+          
           <button type="submit" class="btn btn-primary">
             {{ editModeRet ? 'Actualizar' : 'Guardar Retirada' }}
           </button>
@@ -164,18 +190,15 @@
           <td>{{ retiro.importedeposito }}</td>
           <td>{{ retiro.total }}</td>
           <td>{{ retiro.opcionespago }}</td>
-          <td>
-  <div class="d-flex">
-    <!-- Botón Generar Factura, visible para todos -->
-    <button class="btn btn-sm btn-info me-2" @click="generarFactura(retiro)">Generar Factura</button>
-    <!-- Botones solo para admin -->
-    <template v-if="isAdmin">
-      <button class="btn btn-sm btn-warning me-2" @click="editarRetirada(retiro)">Editar</button>
-      <button class="btn btn-sm btn-danger" @click="mostrarModalEliminar(retiro)">Eliminar</button>
-    </template>
-  </div>
-</td>
-
+          <td v-if="isAdmin">
+            <div class="d-flex">
+              <button class="btn btn-sm btn-info me-2" @click="generarFactura(retiro)">Generar Factura</button>
+              <template v-if="isAdmin">
+                <button class="btn btn-sm btn-warning me-2" @click="editarRetirada(retiro)">Editar</button>
+                <button class="btn btn-sm btn-danger" @click="mostrarModalEliminar(retiro)">Eliminar</button>
+              </template>
+            </div>
+          </td>
         </tr>
       </tbody>
     </table>
@@ -204,7 +227,7 @@
 import { ref, computed, onMounted, watch, inject } from 'vue'
 import axios from 'axios'
 
-// Inyectar objeto "user" y determinar si es admin
+// Inyectar objeto "user" y determinar si es admin (proveído desde un componente padre)
 const user = inject('user')
 const isAdmin = computed(() => {
   return user && user.value && user.value.role && user.value.role.toLowerCase() === 'admin'
@@ -260,6 +283,19 @@ const vehiculosDisponibles = computed(() =>
   vehiculos.value.filter(v => v.estado === 'En depósito')
 )
 
+// Objeto para errores de validación
+const errors = ref({
+  idvehiculos: "",
+  nombre: "",
+  nif: "",
+  domicilio: "",
+  poblacion: "",
+  provincia: "",
+  permiso: "",
+  opcionespago: "",
+  total: ""
+})
+
 // Función para obtener la fecha/hora actual en formato "YYYY-MM-DD HH:mm:ss"
 function getFechaActual(dateObj) {
   const year = dateObj.getFullYear()
@@ -271,7 +307,7 @@ function getFechaActual(dateObj) {
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
 }
 
-// Función para formatear fecha; si contiene "T", se convierte a "YYYY-MM-DD HH:mm:ss"
+// Función para formatear fecha; si contiene "T", se convierte
 function formatDate(fecha) {
   if (!fecha) return 'N/A'
   if (fecha.includes('T')) {
@@ -343,9 +379,70 @@ async function onVehiculoChange() {
   }
 }
 
-// Función para guardar la retirada (POST) o actualizar si es edición
+// Función de validación del formulario
+function validarRetirada() {
+  let valido = true;
+  errors.value = {
+    idvehiculos: "",
+    nombre: "",
+    nif: "",
+    domicilio: "",
+    poblacion: "",
+    provincia: "",
+    permiso: "",
+    opcionespago: "",
+    total: ""
+  };
+
+  if (!retirada.value.idvehiculos) {
+    errors.value.idvehiculos = "Debes seleccionar un vehículo.";
+    valido = false;
+  }
+  if (!retirada.value.nombre.trim()) {
+    errors.value.nombre = "El campo Nombre no puede estar vacío.";
+    valido = false;
+  }
+  if (!retirada.value.nif.trim()) {
+    errors.value.nif = "El campo NIF no puede estar vacío.";
+    valido = false;
+  } else {
+    const nifRegex = /^\d{8}[A-Za-z]$/;
+    if (!nifRegex.test(retirada.value.nif.trim())) {
+      errors.value.nif = "El NIF debe tener 8 dígitos seguidos de una letra (ej. 12345678Z).";
+      valido = false;
+    }
+  }
+  if (!retirada.value.domicilio.trim()) {
+    errors.value.domicilio = "El campo Domicilio no puede estar vacío.";
+    valido = false;
+  }
+  if (!retirada.value.poblacion.trim()) {
+    errors.value.poblacion = "El campo Población no puede estar vacío.";
+    valido = false;
+  }
+  if (!retirada.value.provincia.trim()) {
+    errors.value.provincia = "El campo Provincia no puede estar vacío.";
+    valido = false;
+  }
+  if (!retirada.value.permiso) {
+    errors.value.permiso = "Debes seleccionar un permiso.";
+    valido = false;
+  }
+  if (!retirada.value.opcionespago) {
+    errors.value.opcionespago = "Debes seleccionar una opción de pago.";
+    valido = false;
+  }
+  if (editModeRet.value && !retirada.value.total) {
+    errors.value.total = "El campo Total es obligatorio en modo edición.";
+    valido = false;
+  }
+  return valido;
+}
+
+// Función para guardar la retirada (POST o PUT)
 const editModeRet = ref(false)
 async function guardarRetirada() {
+  if (!validarRetirada()) return;
   try {
     if (editModeRet.value && retirada.value.idvehiculos) {
       await axios.put(`/retiradas/${retirada.value.idvehiculos}`, retirada.value)
@@ -354,12 +451,12 @@ async function guardarRetirada() {
       await axios.post('/retiradas', retirada.value)
       mensajeExito.value = 'Retirada registrada exitosamente.'
     }
-    modalExito.value = true
+    modalExito.value = true;
     setTimeout(() => {
-      modalExito.value = false
-      cancelarRetirada()
-      cargarRetiradas()
-    }, 2000)
+      modalExito.value = false;
+      cancelarRetirada();
+      cargarRetiradas();
+    }, 2000);
   } catch (error) {
     console.error('Error al guardar retirada:', error)
   }
@@ -367,10 +464,21 @@ async function guardarRetirada() {
 
 // Función para cancelar y limpiar el formulario de retirada
 function cancelarRetirada() {
-  mostrarFormulario.value = false
-  mensajeExito.value = ''
-  modalExito.value = false
-  editModeRet.value = false
+  mostrarFormulario.value = false;
+  mensajeExito.value = '';
+  modalExito.value = false;
+  editModeRet.value = false;
+  errors.value = {
+    idvehiculos: "",
+    nombre: "",
+    nif: "",
+    domicilio: "",
+    poblacion: "",
+    provincia: "",
+    permiso: "",
+    opcionespago: "",
+    total: ""
+  };
   retirada.value = {
     idvehiculos: '',
     nombre: '',
@@ -385,34 +493,34 @@ function cancelarRetirada() {
     importedeposito: '',
     total: '',
     opcionespago: ''
-  }
+  };
 }
 
 // Función para alternar la visualización del formulario
 function toggleFormulario() {
-  mostrarFormulario.value = !mostrarFormulario.value
+  mostrarFormulario.value = !mostrarFormulario.value;
   if (!mostrarFormulario.value) {
-    cancelarRetirada()
+    cancelarRetirada();
   }
 }
 
 // Función para editar una retirada
 function editarRetirada(ret) {
-  retirada.value = { ...ret }
-  editModeRet.value = true
-  mostrarFormulario.value = true
+  retirada.value = { ...ret };
+  editModeRet.value = true;
+  mostrarFormulario.value = true;
 }
 
 // Función para mostrar modal de eliminación
 function mostrarModalEliminar(ret) {
-  retiradaAEliminar.value = ret
-  modalEliminar.value = true
+  retiradaAEliminar.value = ret;
+  modalEliminar.value = true;
 }
 
 // Función para cerrar el modal de eliminación
 function cerrarModalEliminar() {
-  modalEliminar.value = false
-  retiradaAEliminar.value = null
+  modalEliminar.value = false;
+  retiradaAEliminar.value = null;
 }
 
 // Función para confirmar la eliminación
@@ -439,8 +547,8 @@ function generarFactura(ret) {
 
 // Función para obtener la matrícula de un vehículo a partir de su ID
 function getMatriculaById(idVehiculo) {
-  const veh = vehiculos.value.find(v => v.id == idVehiculo)
-  return veh ? veh.matricula : 'N/A'
+  const veh = vehiculos.value.find(v => v.id == idVehiculo);
+  return veh ? veh.matricula : 'N/A';
 }
 
 // Función para cerrar los modales al hacer clic en el fondo
