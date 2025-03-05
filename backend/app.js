@@ -4,7 +4,7 @@ const cors = require('cors');
 const mysql = require('mysql2');
 const session = require('express-session');
 const MySQLStore = require('express-mysql-session')(session);
-
+const path = require('path');
 
 // Importación de rutas
 const tarifasRoutes = require('./routes/tarifasRoutes');
@@ -18,19 +18,23 @@ const app = express();
 
 // Habilitar CORS antes de definir las rutas
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin: true,
   credentials: true
 }));
 
 // Middleware para parsear JSON
 app.use(express.json());
+app.use(express.static(path.join(__dirname, '../dist')));
 
-// Configuración de conexión para express-session
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dist', 'index.html'));
+});
+
 const dbOptions = {
-  host: 'localhost',
-  user: 'root',
-  password: '',
-  database: 'proyecto_final_vue'
+  host: process.env.DB_HOST || 'localhost',
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD || '',
+  database: process.env.DB_NAME || 'proyecto_final_vue'
 };
 const sessionStore = new MySQLStore(dbOptions);
 
