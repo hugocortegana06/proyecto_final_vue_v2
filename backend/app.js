@@ -5,6 +5,7 @@ const mysql = require('mysql2');
 const session = require('express-session');
 const MySQLStore = require('express-mysql-session')(session);
 
+
 // Importación de rutas
 const tarifasRoutes = require('./routes/tarifasRoutes');
 const logRoutes = require('./routes/logRoutes');
