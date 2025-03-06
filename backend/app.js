@@ -1,10 +1,9 @@
-/* snipetcode: backend/app.js */
 const express = require('express');
 const cors = require('cors');
 const mysql = require('mysql2');
 const session = require('express-session');
 const MySQLStore = require('express-mysql-session')(session);
-const path = require('path');
+const path = require('path'); // Añade esta línea
 
 // Importación de rutas
 const tarifasRoutes = require('./routes/tarifasRoutes');
@@ -16,20 +15,24 @@ const retiradasRoutes = require('./routes/retiradasRoutes');
 
 const app = express();
 
-// Habilitar CORS antes de definir las rutas
+// Habilitar CORS (ajusta para producción después)
 app.use(cors({
-  origin: true,
+  origin: true, // Acepta cualquier origen por ahora
   credentials: true
 }));
 
 // Middleware para parsear JSON
 app.use(express.json());
+
+// Sirve los archivos estáticos de dist (ubicado en la raíz)
 app.use(express.static(path.join(__dirname, '../dist')));
 
+// Ruta para manejar todas las solicitudes no capturadas por las APIs
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../dist', 'index.html'));
 });
 
+// Configuración de conexión para express-session
 const dbOptions = {
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
